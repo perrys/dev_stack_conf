@@ -9,6 +9,8 @@
 !.emacs.d/scp-utils.el
 !.tmux.conf
 !.zshrc
+!.emacs.d/rust-setup.el
+
 
 # etc...
 
