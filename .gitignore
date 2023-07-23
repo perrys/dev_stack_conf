@@ -1,0 +1,20 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!.config/kitty/kitty.conf
+!.emacs
+!.emacs.d/custom.el
+!.emacs.d/scp-utils.el
+!.tmux.conf
+!.zshrc
+
+# etc...
+
+# ...even if they are in subdirectories
+#!*/
+
+# if the files to be tracked are in subdirectories
+#!*/a/b/file1.txt
+#!*/a/b/c/*
