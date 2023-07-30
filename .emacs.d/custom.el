@@ -39,14 +39,7 @@
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
  '(tool-bar-mode nil)
- '(tramp-default-method-alist
-   '((nil "%" "smb")
-     ("" "\\`\\(anonymous\\|ftp\\)\\'" "ftp")
-     ("\\`ftp\\." "" "ftp")
-     ("\\`localhost\\'" "\\`root\\'" "su")
-     ("\\`dbsquash\\." "" "ftp")))
- '(warning-suppress-types '((comp) (comp)))
- '(which-function-mode nil))
+ '(warning-suppress-types '((comp))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

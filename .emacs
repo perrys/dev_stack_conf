@@ -15,10 +15,12 @@
 (global-set-key [f3] 'shell)
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
-
+(setq tramp-default-method "ssh")
+(evil-mode t)
 ;; change mode-line color by evil state
 (defconst scp-modeline-default-colors (cons (face-background 'mode-line)
-                           (face-foreground 'mode-line)))
+                                            (face-foreground 'mode-line)))
+
 (add-hook 'post-command-hook
           (lambda ()
             (let ((color (cond ((minibufferp) scp-modeline-default-colors)
