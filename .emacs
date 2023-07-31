@@ -25,6 +25,11 @@
 (load custom-file)
 
 (global-set-key [f3] 'shell)
+(global-set-key (kbd "C-x <up>") 'windmove-up)
+(global-set-key (kbd "C-x <down>") 'windmove-down)
+(global-set-key (kbd "C-x <left>") 'windmove-left)
+(global-set-key (kbd "C-x <right>") 'windmove-right)
+
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 (setq tramp-default-method "ssh")
