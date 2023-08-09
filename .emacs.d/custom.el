@@ -21,6 +21,9 @@
  '(align-to-tab-stop nil)
  '(column-number-mode t)
  '(css-indent-offset 4)
+ '(custom-enabled-themes '(gruvbox-dark-hard))
+ '(custom-safe-themes
+   '("d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" default))
  '(default-frame-alist '((width . 120) (height . 50) (menu-bar-lines . 1)))
  '(dired-garbage-files-regexp
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
@@ -45,15 +48,19 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(font-lock-builtin-face ((t (:foreground "brightcyan"))))
- '(font-lock-comment-face ((t (:foreground "brightblack" :slant italic))))
- '(font-lock-constant-face ((t (:foreground "brightred"))))
- '(font-lock-doc-face ((t (:inherit font-lock-comment-face))))
- '(font-lock-function-name-face ((t (:foreground "brightyellow"))))
- '(font-lock-keyword-face ((t (:foreground "brightred"))))
- '(font-lock-preprocessor-face ((t (:inherit nil :foreground "brightcyan"))))
- '(font-lock-string-face ((t (:foreground "brightgreen"))))
- '(font-lock-type-face ((t (:foreground "brightyellow"))))
- '(font-lock-variable-name-face ((t (:foreground "brightblue"))))
  '(header-line ((t (:inherit mode-line-inactive :inverse-video nil :underline t))))
- '(mode-line ((t (:background "blue" :foreground "white" :box (:line-width -1 :style released-button))))))
+ '(mode-line ((t (:background "#3c7375" :foreground "#ebdbb2" :box (:line-width -1 :style released-button))))))
+
+;; tty=based gruvbox faces:
+ ;; '(font-lock-builtin-face ((t (:foreground "brightcyan"))))
+ ;; '(font-lock-comment-face ((t (:foreground "brightblack" :slant italic))))
+ ;; '(font-lock-constant-face ((t (:foreground "brightred"))))
+ ;; '(font-lock-doc-face ((t (:inherit font-lock-comment-face))))
+ ;; '(font-lock-function-name-face ((t (:foreground "brightyellow"))))
+ ;; '(font-lock-keyword-face ((t (:foreground "brightred"))))
+ ;; '(font-lock-preprocessor-face ((t (:inherit nil :foreground "brightcyan"))))
+ ;; '(font-lock-string-face ((t (:foreground "brightgreen"))))
+ ;; '(font-lock-type-face ((t (:foreground "brightyellow"))))
+ ;; '(font-lock-variable-name-face ((t (:foreground "brightblue"))))
+ ;; '(header-line ((t (:inherit mode-line-inactive :inverse-video nil :underline t))))
+ ;; '(mode-line ((t (:background "blue" :foreground "white" :box (:line-width -1 :style released-button))))))
