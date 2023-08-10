@@ -35,6 +35,12 @@
 (setq tramp-default-method "ssh")
 
 (add-hook 'prog-mode-hook (lambda () (setq display-line-numbers 'relative)))
+(defun scp-toggle-line-number-display ()
+    "Toggle between absolute and relative line numbers"
+  (interactive)
+  (if (eq display-line-numbers 'relative) 
+      (setq display-line-numbers t)
+    (setq display-line-numbers 'relative)))
 
 ;; change mode-line color by evil state
 (defconst scp-modeline-default-colors (cons (face-background 'mode-line)
