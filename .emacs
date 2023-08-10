@@ -34,6 +34,8 @@
 (put 'downcase-region 'disabled nil)
 (setq tramp-default-method "ssh")
 
+(add-hook 'prog-mode-hook (lambda () (setq display-line-numbers 'relative)))
+
 ;; change mode-line color by evil state
 (defconst scp-modeline-default-colors (cons (face-background 'mode-line)
                                             (face-foreground 'mode-line)))
@@ -49,14 +51,7 @@
               (set-face-background 'mode-line (car color))
               (set-face-foreground 'mode-line (cdr color)))))
 
-
-(defun on-after-init ()
-  "If the FRAME created in terminal don't load background color."
-  (unless (display-graphic-p (selected-frame))
-    (set-face-background 'default "unspecified-bg" (selected-frame))))
-
-(add-hook 'window-setup-hook 'on-after-init)
-
+(set-face-background 'default "unspecified-bg")
 
 ;; . in visual mode
 (defun moon/make-region-search-history ()
