@@ -42,6 +42,22 @@
       (setq display-line-numbers t)
     (setq display-line-numbers 'relative)))
 
+(defun evil-scroll-down-and-center ()
+  "Center screen on cursor after scrolling"
+  (interactive)
+  (evil-scroll-down 0)
+  (evil-scroll-line-to-center nil)
+  nil)
+
+(defun evil-scroll-up-and-center ()
+  "Center screen on cursor after scrolling"
+  (interactive)
+  (evil-scroll-up 0)
+  (evil-scroll-line-to-center nil))
+
+(evil-global-set-key 'motion (kbd "C-d") 'evil-scroll-down-and-center)
+(evil-global-set-key 'motion (kbd "C-b") 'evil-scroll-up-and-center)
+
 ;; change mode-line color by evil state
 (defconst scp-modeline-default-colors (cons (face-background 'mode-line)
                                             (face-foreground 'mode-line)))
