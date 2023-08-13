@@ -55,7 +55,7 @@
   (evil-scroll-up 0)
   (evil-scroll-line-to-center nil))
 
-(evil-global-set-key 'motion (kbd "C-d") 'evil-scroll-down-and-center)
+(evil-global-set-key 'motion (kbd "C-f") 'evil-scroll-down-and-center)
 (evil-global-set-key 'motion (kbd "C-b") 'evil-scroll-up-and-center)
 
 ;; change mode-line color by evil state
