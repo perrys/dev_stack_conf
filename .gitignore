@@ -10,6 +10,7 @@
 !.tmux.conf
 !.zshrc
 !.emacs.d/rust-setup.el
+!.gdbinit
 
 
 # etc...
