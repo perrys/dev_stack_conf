@@ -17,6 +17,7 @@
 
 (use-package evil)
 (use-package evil-escape)
+(use-package magit)
 (use-package undo-fu)
 (evil-mode t)
 
