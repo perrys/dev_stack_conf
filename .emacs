@@ -24,17 +24,37 @@
 
 (load custom-file)
 
+(defun enlarge-window-vertically (delta)
+  "Make selected window DELTA columns taller."
+  (interactive "p")
+  (enlarge-window delta nil))
+
+(defun shrink-window-vertically (delta)
+  "Make selected window DELTA columns shorter."
+  (interactive "p")
+  (shrink-window delta nil))
+
 (global-set-key [f3] 'shell)
 (global-set-key (kbd "C-x <up>") 'windmove-up)
 (global-set-key (kbd "C-x <down>") 'windmove-down)
 (global-set-key (kbd "C-x <left>") 'windmove-left)
 (global-set-key (kbd "C-x <right>") 'windmove-right)
+(global-set-key (kbd "C-x |") 'split-window-right)
+(global-set-key (kbd "C-x _") 'split-window-below)
+(global-set-key (kbd "M-<left>") 'shrink-window-horizontally)
+(global-set-key (kbd "M-<right>") 'enlarge-window-horizontally)
+(global-set-key (kbd "M-<up>") 'shrink-window-vertically)
+(global-set-key (kbd "M-<down>") 'enlarge-window-vertically)
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 (setq tramp-default-method "ssh")
 
-(add-hook 'prog-mode-hook (lambda () (setq display-line-numbers 'relative)))
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (display-line-numbers-mode)
+            (setq display-line-numbers 'relative)))
+
 (defun scp-toggle-line-number-display ()
     "Toggle between absolute and relative line numbers"
   (interactive)
