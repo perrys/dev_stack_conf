@@ -38,6 +38,7 @@
  '(indent-tabs-mode nil)
  '(ispell-dictionary nil)
  '(make-backup-files nil)
+ '(markdown-command "cmark-gfm -e table")
  '(mouse-yank-at-point t)
  '(package-selected-packages
    '(magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
