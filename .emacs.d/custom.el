@@ -33,6 +33,7 @@
  '(evil-mode t)
  '(evil-search-module 'evil-search)
  '(evil-undo-system 'undo-fu)
+ '(fill-column 80)
  '(gdb-default-window-configuration-file "gdb-window-cfg.el")
  '(gdb-many-windows t)
  '(indent-tabs-mode nil)
@@ -51,6 +52,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(font-lock-comment-face ((t (:foreground "#7c6f64" :slant italic))))
  '(header-line ((t (:inherit mode-line-inactive :inverse-video nil :underline t))))
  '(mode-line ((t (:background "#3c7375" :foreground "#ebdbb2" :box (:line-width -1 :style released-button))))))
 
