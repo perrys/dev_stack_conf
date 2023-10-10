@@ -28,17 +28,15 @@
  '(default-frame-alist '((width . 120) (height . 50) (menu-bar-lines . 1)))
  '(dired-garbage-files-regexp
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
+ '(evil-escape-delay 0.2)
  '(evil-escape-key-sequence "jk")
  '(evil-escape-mode t)
  '(evil-mode t)
  '(evil-search-module 'evil-search)
  '(evil-undo-system 'undo-fu)
- '(gdb-default-window-configuration-file "gdb-window-cfg.el")
- '(gdb-many-windows t)
  '(indent-tabs-mode nil)
  '(ispell-dictionary nil)
  '(make-backup-files nil)
- '(markdown-command "cmark-gfm -e table")
  '(mouse-yank-at-point t)
  '(package-selected-packages
    '(magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
@@ -46,6 +44,7 @@
  '(server-mode t)
  '(tool-bar-mode nil)
  '(warning-suppress-types '((comp))))
+ ;;'(gdb-default-window-configuration-file "gdb-window-cfg.el")
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
