@@ -96,6 +96,19 @@
 
 (set-face-background 'default "unspecified-bg")
 
+(defun highlight-selected-window (f)
+  "Blacken the background of any window which does not show the same buffer as the selected window"
+  (let ((sel-buf (window-buffer (selected-window))))
+    (buffer-face-set 'default)
+    (walk-windows (lambda (win)
+                    (let ((mybuf (window-buffer win)))
+                      (unless (eq mybuf sel-buf)
+                        (with-current-buffer (window-buffer win)
+                          (buffer-face-set '(:background "gray7")))))))))
+
+(add-hook 'window-state-change-functions
+          'highlight-selected-window)
+
 ;; . in visual mode
 (defun moon/make-region-search-history ()
   "Make region a histroy so I can use cgn."
