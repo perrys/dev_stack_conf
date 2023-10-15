@@ -19,5 +19,6 @@ PS2="> "
 bindkey -v
 bindkey ^R history-incremental-search-backward 
 bindkey ^S history-incremental-search-forward
+bindkey jk vi-cmd-mode
 
 export PYTHONPATH=$PYTHONPATH:~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc

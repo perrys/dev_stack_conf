@@ -106,8 +106,8 @@
                         (with-current-buffer (window-buffer win)
                           (buffer-face-set '(:background "gray7")))))))))
 
-(add-hook 'window-state-change-functions
-          'highlight-selected-window)
+;(add-hook 'window-state-change-functions
+;          'highlight-selected-window)
 
 ;; . in visual mode
 (defun moon/make-region-search-history ()
