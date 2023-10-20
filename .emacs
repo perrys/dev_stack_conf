@@ -20,6 +20,11 @@
 (use-package magit)
 (use-package undo-fu)
 (evil-mode t)
+(evil-set-leader 'insert (kbd " "))
+(evil-set-leader 'replace (kbd " "))
+;; make _ part of a word:
+(add-hook 'prog-mode-hook
+          (lambda () (modify-syntax-entry ?_ "w")))
 
 (load-library "rust-setup.el") 
 
