@@ -15,13 +15,24 @@
   (setq use-package-always-ensure t
         use-package-expand-minimally t))
 
-(use-package evil)
+(use-package evil
+  :ensure t
+  :init
+  (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
+  (setq evil-want-keybinding nil)
+  :config
+  (evil-mode 1))
+
+(use-package evil-collection
+  :after evil
+  :ensure t
+  :config
+  (evil-collection-init))
+
 (use-package evil-escape)
 (use-package magit)
 (use-package undo-fu)
-(evil-mode t)
-(evil-set-leader 'insert (kbd " "))
-(evil-set-leader 'replace (kbd " "))
+
 ;; make _ part of a word:
 (add-hook 'prog-mode-hook
           (lambda () (modify-syntax-entry ?_ "w")))
@@ -45,12 +56,32 @@
 (global-set-key (kbd "M-j") 'windmove-down)
 (global-set-key (kbd "M-h") 'windmove-left)
 (global-set-key (kbd "M-l") 'windmove-right)
+(global-set-key (kbd "M-o") 'delete-other-windows)
 (global-set-key (kbd "C-x |") 'split-window-right)
 (global-set-key (kbd "C-x _") 'split-window-below)
 (global-set-key (kbd "M-<left>") 'shrink-window-horizontally)
 (global-set-key (kbd "M-<right>") 'enlarge-window-horizontally)
 (global-set-key (kbd "M-<up>") 'shrink-window-vertically)
 (global-set-key (kbd "M-<down>") 'enlarge-window-vertically)
+
+(evil-set-leader nil (kbd "C-SPC"))
+(evil-set-leader '(normal motion visual) (kbd "SPC"))
+
+(defun scp-dired-current-dir ()
+  (interactive)
+  (let ((dirname (file-name-parent-directory (buffer-file-name (current-buffer)))))
+    (dired dirname)))
+(evil-define-key 'normal 'global (kbd "<leader>d") 'scp-dired-current-dir)
+(evil-define-key '(normal motion visual) 'global (kbd "<leader>wq") 'delete-window)
+(evil-define-key '(normal motion visual) 'global (kbd "<leader>wo") 'delete-other-windows)
+(evil-define-key '(normal motion visual) 'global (kbd "<leader>h") 'evil-ex-nohighlight)
+
+(defun scp-evil-paste-before (count &optional register)
+  (interactive "*P<x>")
+  (delete-region (point) (mark))
+  (evil-paste-before count register))
+(evil-define-key 'normal 'global (kbd "<leader>p") 'scp-evil-paste-before)
+
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)

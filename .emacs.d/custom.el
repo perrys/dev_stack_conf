@@ -45,7 +45,7 @@
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
  '(package-selected-packages
-   '(magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
  '(tool-bar-mode nil)
