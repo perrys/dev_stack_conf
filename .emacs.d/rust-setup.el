@@ -12,14 +12,12 @@
               ([f4] . flycheck-list-errors)
               ([f1] . lsp-execute-code-action)
               ([f2] . lsp-rename)
-              ([f5] . lsp-ui-doc-toggle)
               ([f6] . lsp-inlay-hints-mode)
               ("C-c C-c q" . lsp-workspace-restart)
               ("C-c C-c Q" . lsp-workspace-shutdown)
               ("C-c C-c s" . lsp-rust-analyzer-status))
   :config
   ;; uncomment for less flashiness
-  (setq lsp-eldoc-hook nil)
   ;; (setq lsp-enable-symbol-highlighting nil)
   ;; (setq lsp-signature-auto-activate nil)
 
@@ -62,7 +60,13 @@
   :custom
   (lsp-ui-peek-always-show nil)
   (lsp-ui-sideline-show-hover nil)
-  (lsp-ui-doc-enable nil))
+  (lsp-ui-sideline-show-code-actions t)
+  (lsp-ui-sideline-show-diagnostics t)
+  (lsp-ui-sideline-delay 1.0)
+  (lsp-ui-doc-enable t)
+  (lsp-ui-doc-delay 0.2)
+  (lsp-ui-doc-show-with-cursor t)
+  (lsp-ui-doc-show-with-mouse nil))
 
 (use-package flycheck :ensure)
 
@@ -76,7 +80,7 @@
 (use-package company
   :ensure
   :custom
-  (company-idle-delay 0.5) ;; how long to wait until popup
+  (company-idle-delay 0.2) ;; how long to wait until popup
   ;; (company-begin-commands nil) ;; uncomment to disable popup
   :bind
   (:map company-active-map
