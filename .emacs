@@ -75,6 +75,8 @@
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>wq") 'delete-window)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>wo") 'delete-other-windows)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>h") 'evil-ex-nohighlight)
+(evil-define-key '(normal motion visual) 'rustic-mode-map (kbd "<leader>b") 'rustic-compile)
+(evil-define-key '(normal motion visual) 'rustic-mode-map (kbd "<leader>x") 'next-error)
 
 (defun scp-evil-paste-before (count &optional register)
   (interactive "*P<x>")
