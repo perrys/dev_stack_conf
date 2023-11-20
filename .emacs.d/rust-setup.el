@@ -12,7 +12,7 @@
               ([f4] . flycheck-list-errors)
               ([f1] . lsp-execute-code-action)
               ([f2] . lsp-rename)
-              ([f6] . lsp-inlay-hints-mode)
+              ("M-SPC" . lsp-inlay-hints-mode)
               ("C-c C-c q" . lsp-workspace-restart)
               ("C-c C-c Q" . lsp-workspace-shutdown)
               ("C-c C-c s" . lsp-rust-analyzer-status))
@@ -41,7 +41,7 @@
   (lsp-rust-analyzer-cargo-watch-command "clippy")
   (lsp-rust-analyzer-lens-enable nil)
   ;; (lsp-eldoc-render-all t)
-  (lsp-idle-delay 2.0)
+  (lsp-idle-delay 0.2)
   ;; enable / disable the hints as you prefer:
   (lsp-inlay-hint-enable t)
   (lsp-rust-analyzer-binding-mode-hints t)
@@ -59,6 +59,7 @@
   :commands lsp-ui-mode
   :custom
   (lsp-ui-peek-always-show nil)
+  (lsp-ui-sideline-enable nil) ; disable the sideline entirely
   (lsp-ui-sideline-show-hover nil)
   (lsp-ui-sideline-show-code-actions t)
   (lsp-ui-sideline-show-diagnostics t)
@@ -66,7 +67,7 @@
   (lsp-ui-doc-enable t)
   (lsp-ui-doc-delay 0.2)
   (lsp-ui-doc-show-with-cursor t)
-  (lsp-ui-doc-show-with-mouse nil))
+  (lsp-ui-doc-show-with-mouse t))
 
 (use-package flycheck :ensure)
 
@@ -84,8 +85,8 @@
   ;; (company-begin-commands nil) ;; uncomment to disable popup
   :bind
   (:map company-active-map
-	      ("C-n". company-select-next)
-	      ("C-p". company-select-previous)
+	      ("M-j". company-select-next)
+	      ("M-k". company-select-previous)
 	      ("M-<". company-select-first)
 	      ("M->". company-select-last))
   (:map company-mode-map
