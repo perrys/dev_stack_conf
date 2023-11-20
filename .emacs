@@ -132,8 +132,8 @@
               (set-face-background 'mode-line (car color))
               (set-face-foreground 'mode-line (cdr color)))))
 
-(set-face-background 'default "unspecified-bg")
-
+(unless window-system
+  (set-face-background 'default "unspecified-bg"))
 (defun highlight-selected-window (f)
   "Blacken the background of any window which does not show the same buffer as the selected window"
   (let ((sel-buf (window-buffer (selected-window))))
