@@ -57,6 +57,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(default ((t (:inherit nil :extend nil :stipple nil :background "#1d2021" :foreground "#ebdbb2" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight ultra-light :height 106 :width normal :foundry "JB" :family "JetBrains Mono"))))
+ '(flycheck-error ((t (:foreground "brightred" :inverse-video nil :box nil :underline (:color "#fb4933" :style wave :position nil)))))
  '(font-lock-comment-face ((t (:foreground "#7c6f64" :slant italic))))
  '(header-line ((t (:inherit mode-line-inactive :inverse-video nil :underline t))))
  '(mode-line ((t (:background "#3c7375" :foreground "#ebdbb2" :box (:line-width -1 :style released-button))))))

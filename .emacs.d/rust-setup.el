@@ -12,6 +12,7 @@
               ([f4] . flycheck-list-errors)
               ([f1] . lsp-execute-code-action)
               ([f2] . lsp-rename)
+              ([f12] . lsp-find-type-definition)
               ("M-SPC" . lsp-inlay-hints-mode)
               ("C-c C-c q" . lsp-workspace-restart)
               ("C-c C-c Q" . lsp-workspace-shutdown)
@@ -64,7 +65,7 @@
   (lsp-ui-sideline-show-code-actions t)
   (lsp-ui-sideline-show-diagnostics t)
   (lsp-ui-sideline-delay 1.0)
-  (lsp-ui-doc-enable t)
+  (lsp-ui-doc-enable nil) ; disable ui-doc entirely
   (lsp-ui-doc-delay 0.2)
   (lsp-ui-doc-show-with-cursor t)
   (lsp-ui-doc-show-with-mouse t))
