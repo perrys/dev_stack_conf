@@ -12,9 +12,17 @@ autoload -Uz compinit
 compinit
 # End of lines added by compinstall
 
-#PS1='%n@%m %F{red}%/%f $ '
 autoload -U colors && colors
-PS1="%F{red}[%n@%m %1~]%{$reset_color%}%(#.#.$) "
+
+autoload -Uz vcs_info
+precmd() {
+    vcs_info
+}
+zstyle ':vcs_info:*' formats ' %F{magenta}%b%f'
+
+setopt prompt_subst
+
+PS1='[%n@%m %F{cyan}%1~%f${vcs_info_msg_0_}]%(#.#.$) '
 PS2="> "
 bindkey -v
 bindkey ^R history-incremental-search-backward 
