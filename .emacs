@@ -4,7 +4,6 @@
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
 (require 'package)
-;(add-to-list 'package-archives '("tromey" . "http://tromey.com/elpa/"))
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
 (setq package-user-dir (expand-file-name "elpa/" user-emacs-directory))
 (package-initialize)
@@ -33,10 +32,6 @@
 (use-package magit)
 (use-package undo-fu)
 
-;; make _ part of a word:
-(add-hook 'prog-mode-hook
-          (lambda () (modify-syntax-entry ?_ "w")))
-
 (load-library "rust-setup.el") 
 
 (load custom-file)
@@ -56,7 +51,6 @@
 (global-set-key (kbd "M-j") 'windmove-down)
 (global-set-key (kbd "M-h") 'windmove-left)
 (global-set-key (kbd "M-l") 'windmove-right)
-(global-set-key (kbd "M-o") 'delete-other-windows)
 (global-set-key (kbd "C-x |") 'split-window-right)
 (global-set-key (kbd "C-x _") 'split-window-below)
 (global-set-key (kbd "M-<left>") 'shrink-window-horizontally)
@@ -67,11 +61,7 @@
 (evil-set-leader nil (kbd "C-SPC"))
 (evil-set-leader '(normal motion visual) (kbd "SPC"))
 
-(defun scp-dired-current-dir ()
-  (interactive)
-  (let ((dirname (file-name-parent-directory (buffer-file-name (current-buffer)))))
-    (dired dirname)))
-(evil-define-key 'normal 'global (kbd "<leader>d") 'scp-dired-current-dir)
+(evil-define-key 'normal 'global (kbd "<leader>d") 'dired)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>wq") 'delete-window)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>wo") 'delete-other-windows)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>s") 'ispell-word)
@@ -85,6 +75,9 @@
   (evil-paste-before count register))
 (evil-define-key 'normal 'global (kbd "<leader>p") 'scp-evil-paste-before)
 
+;; make _ part of a word:
+(add-hook 'prog-mode-hook
+          (lambda () (modify-syntax-entry ?_ "w")))
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
@@ -135,29 +128,18 @@
 
 (unless window-system
   (set-face-background 'default "unspecified-bg"))
-(defun highlight-selected-window (f)
-  "Blacken the background of any window which does not show the same buffer as the selected window"
-  (let ((sel-buf (window-buffer (selected-window))))
-    (buffer-face-set 'default)
-    (walk-windows (lambda (win)
-                    (let ((mybuf (window-buffer win)))
-                      (unless (eq mybuf sel-buf)
-                        (with-current-buffer (window-buffer win)
-                          (buffer-face-set '(:background "gray7")))))))))
 
-;(add-hook 'window-state-change-functions
-;          'highlight-selected-window)
-
-;; . in visual mode
-(defun moon/make-region-search-history ()
-  "Make region a histroy so I can use cgn."
+(defun window-split-toggle ()
+  "Toggle between horizontal and vertical split with two windows"
   (interactive)
-  (let* ((region-beg (region-beginning))
-         (region-end (region-end))
-         (region (buffer-substring-no-properties region-beg region-end)))
-    (push region evil-ex-search-history)
-    (setq evil-ex-search-pattern (evil-ex-make-search-pattern region))
-    (evil-ex-search-activate-highlight evil-ex-search-pattern)
-    (deactivate-mark)))
-(define-key evil-visual-state-map (kbd ".") 'moon/make-region-search-history)
-
+  (if (> (length (window-list)) 2)
+      (error "Can't toggle with more than 2 windows!")
+    (let ((func (if (window-full-height-p)
+                    #'split-window-vertically
+                  #'split-window-horizontally)))
+      (delete-other-windows)
+      (funcall func)
+      (save-selected-window
+        (other-window 1)
+        (switch-to-buffer (other-buffer))))))
+(global-set-key (kbd "C-x +") 'window-split-toggle)
