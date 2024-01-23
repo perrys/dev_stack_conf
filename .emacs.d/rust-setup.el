@@ -9,7 +9,8 @@
   :bind (:map rustic-mode-map
               ;;("M-j" . lsp-ui-imenu)
               ("M-?" . lsp-find-references)
-              ([f4] . flycheck-list-errors)
+              ([f4] . lsp-ui-doc-glance)
+              ([f5] . flycheck-list-errors)
               ([f1] . lsp-execute-code-action)
               ([f2] . lsp-rename)
               ([f12] . lsp-find-type-definition)
