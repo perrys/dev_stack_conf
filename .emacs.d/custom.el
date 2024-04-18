@@ -5,7 +5,6 @@
 ;; yasnippet
 ;;
 ;; MELPA packages:
-;; helm
 ;; evil
 ;; evil-escape
 ;; flycheck-rust
@@ -46,7 +45,7 @@
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
  '(package-selected-packages
-   '(helm seq evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
  '(tool-bar-mode nil)

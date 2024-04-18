@@ -29,24 +29,6 @@
   :config
   (evil-collection-init))
 
-(use-package helm
-  :config
-  (global-set-key (kbd "M-x") #'helm-M-x)
-  (global-set-key (kbd "C-x C-f") #'helm-find-files)
-  (global-set-key (kbd "C-x b") #'helm-mini)
-  (global-set-key (kbd "C-c h") #'helm-command-prefix)
-  (global-unset-key (kbd "C-x c"))
-  (helm-mode 1))
-
-(setq helm-M-x-fuzzy-match t)
-(setq helm-buffers-fuzzy-matching t)
-(setq helm-recentf-fuzzy-match t)
-(define-key helm-map (kbd "<tab>") #'helm-execute-persistent-action) ; rebind tab to run persistent action
-(define-key helm-map (kbd "C-i") #'helm-execute-persistent-action) ; make TAB work in terminal
-(define-key helm-map (kbd "C-z")  #'helm-select-action) ; list actions using C-z
-(define-key evil-ex-map "b " 'helm-mini)
-(define-key evil-ex-map "e" 'helm-find-files)
-
 (use-package evil-escape)
 (use-package magit)
 (use-package undo-fu)
