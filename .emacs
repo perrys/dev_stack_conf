@@ -32,6 +32,12 @@
 (use-package evil-escape)
 (use-package magit)
 (use-package undo-fu)
+(use-package vertico
+  :config
+  (vertico-mode 1))
+(use-package marginalia
+  :config
+  (marginalia-mode 1))
 
 (load-library "rust-setup.el") 
 

@@ -30,3 +30,4 @@ bindkey ^S history-incremental-search-forward
 bindkey jk vi-cmd-mode
 
 export PYTHONPATH=$PYTHONPATH:~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc
+export RUST_BACKTRACE=1
