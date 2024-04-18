@@ -24,13 +24,38 @@
 
 (use-package evil-collection
   :after evil
+  :custom (evil-collection-setup-minibuffer t)
   :ensure t
   :config
   (evil-collection-init))
 
+;; (use-package helm
+;;   :config
+;;   (global-set-key (kbd "M-x") #'helm-M-x)
+;;   (global-set-key (kbd "C-x C-f") #'helm-find-files)
+;;   (global-set-key (kbd "C-x b") #'helm-mini)
+;;   (global-set-key (kbd "C-c h") #'helm-command-prefix)
+;;   (global-unset-key (kbd "C-x c"))
+;;   (helm-mode 1))
+
+;; (setq helm-M-x-fuzzy-match t)
+;; (setq helm-buffers-fuzzy-matching t)
+;; (setq helm-recentf-fuzzy-match t)
+;; (define-key helm-map (kbd "<tab>") #'helm-execute-persistent-action) ; rebind tab to run persistent action
+;; (define-key helm-map (kbd "C-i") #'helm-execute-persistent-action) ; make TAB work in terminal
+;; (define-key helm-map (kbd "C-z")  #'helm-select-action) ; list actions using C-z
+;; (define-key evil-ex-map "b " 'helm-mini)
+;; (define-key evil-ex-map "e" 'helm-find-files)
+
 (use-package evil-escape)
 (use-package magit)
 (use-package undo-fu)
+(use-package vertico
+  :config
+  (vertico-mode 1))
+(use-package marginalia
+  :config
+  (marginalia-mode 1))
 
 (load-library "rust-setup.el") 
 
@@ -67,6 +92,7 @@
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>s") 'ispell-word)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>h") 'evil-ex-nohighlight)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>x") 'next-error)
+(evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>b") 'compile)
 (evil-define-key '(normal motion visual) 'rustic-mode-map (kbd "<leader>b") 'rustic-compile)
 
 (defun scp-evil-paste-before (count &optional register)

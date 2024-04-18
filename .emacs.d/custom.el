@@ -21,6 +21,7 @@
  '(align-to-tab-stop nil)
  '(asm-comment-char ?#)
  '(column-number-mode t)
+ '(completion-styles '(basic partial-completion emacs22 flex))
  '(css-indent-offset 4)
  '(custom-enabled-themes '(gruvbox-dark-hard))
  '(custom-safe-themes
