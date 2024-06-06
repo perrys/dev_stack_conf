@@ -38,6 +38,7 @@
 (use-package marginalia
   :config
   (marginalia-mode 1))
+(use-package yaml)
 
 (load-library "rust-setup.el") 
 

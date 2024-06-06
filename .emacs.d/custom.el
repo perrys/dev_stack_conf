@@ -23,6 +23,7 @@
  '(column-number-mode t)
  '(completion-styles '(basic partial-completion emacs22 flex))
  '(css-indent-offset 4)
+ '(cursor-type 'bar)
  '(custom-enabled-themes '(gruvbox-dark-hard))
  '(custom-safe-themes
    '("d445c7b530713eac282ecdeea07a8fa59692c83045bf84dd112dd738c7bcad1d" "d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" default))
@@ -46,7 +47,7 @@
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
  '(package-selected-packages
-   '(consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
  '(tool-bar-mode nil)
