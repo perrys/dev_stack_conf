@@ -24,7 +24,6 @@
 
 (use-package evil-collection
   :after evil
-  :custom (evil-collection-setup-minibuffer t)
   :ensure t
   :config
   (evil-collection-init))
@@ -52,8 +51,19 @@
 
 (use-package org-roam
   :ensure t
-  :init
-  (org-roam-db-autosync-mode))
+  :custom
+  (org-roam-directory "~/org-roam")
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert))
+  :config
+  (org-roam-db-autosync-enable))
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package yaml)
 
@@ -99,6 +109,7 @@
 (evil-define-key '(normal motion visual) 'rustic-mode-map (kbd "<leader>b") 'rustic-compile)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>R") 'lsp-find-definition)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>r") 'lsp-find-references)
+(evil-define-key '(normal motion visual) 'org-mode-map (kbd "RET") 'org-open-at-point)
 
 (defun scp-evil-paste-before (count &optional register)
   (interactive "*P<x>")
