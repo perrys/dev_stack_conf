@@ -21,7 +21,6 @@
  '(align-to-tab-stop nil)
  '(asm-comment-char ?#)
  '(column-number-mode t)
- '(completion-styles '(basic partial-completion emacs22 flex))
  '(css-indent-offset 4)
  '(cursor-type 'bar)
  '(custom-enabled-themes '(gruvbox-dark-hard))
@@ -47,12 +46,13 @@
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
  '(package-selected-packages
-   '(yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
  '(tool-bar-mode nil)
  '(warning-suppress-types '((comp))))
  ;;'(gdb-default-window-configuration-file "gdb-window-cfg.el")
+ ;;'(completion-styles '(basic partial-completion emacs22 flex))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

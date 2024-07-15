@@ -33,11 +33,28 @@
 (use-package magit)
 (use-package undo-fu)
 (use-package vertico
-  :config
-  (vertico-mode 1))
+  :ensure t
+  :bind (:map vertico-map
+              ("SPC" . minibuffer-complete-word)
+              :map minibuffer-local-map
+              ("M-h" . backward-kill-word))
+  :custom
+  (vertico-cycle t)
+  :init
+  (vertico-mode))
 (use-package marginalia
-  :config
-  (marginalia-mode 1))
+  :after vertico
+  :ensure t
+  :custom
+  (marginalia-annotators '(marginalia-anotators-heavy marginalia-annotators-light nil))
+  :init
+  (marginalia-mode))
+
+(use-package org-roam
+  :ensure t
+  :init
+  (org-roam-db-autosync-mode))
+
 (use-package yaml)
 
 (load-library "rust-setup.el") 
