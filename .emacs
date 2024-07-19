@@ -34,7 +34,7 @@
 (use-package vertico
   :ensure t
   :bind (:map vertico-map
-              ("SPC" . minibuffer-complete-word)
+              ;("SPC" . minibuffer-complete-word)
               :map minibuffer-local-map
               ("M-h" . backward-kill-word))
   :custom
@@ -71,6 +71,13 @@
 
 (load custom-file)
 
+(defun org-roam-node-insert-immediate (arg &rest args)
+  (interactive "P")
+  (let ((args (cons arg args))
+        (org-roam-capture-templates (list (append (car org-roam-capture-templates)
+                                                  '(:immediate-finish t)))))
+    (apply #'org-roam-node-insert args)))
+
 (defun enlarge-window-vertically (delta)
   "Make selected window DELTA columns taller."
   (interactive "p")
@@ -100,6 +107,7 @@
   (setq prefix-arg current-prefix-arg)
   (push '(t . leader) unread-command-events))
 (add-hook 'dired-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
+;(add-hook 'org-roam-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
 
 (evil-define-key 'normal 'global (kbd "<leader>d") 'dired)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>s") 'ispell-word)
@@ -109,7 +117,11 @@
 (evil-define-key '(normal motion visual) 'rustic-mode-map (kbd "<leader>b") 'rustic-compile)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>R") 'lsp-find-definition)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>r") 'lsp-find-references)
-(evil-define-key '(normal motion visual) 'org-mode-map (kbd "RET") 'org-open-at-point)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "RET") 'org-open-at-point)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>f") 'org-roam-node-find)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>i") 'org-roam-node-insert)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>I") 'org-roam-node-insert-immediate)
 
 (defun scp-evil-paste-before (count &optional register)
   (interactive "*P<x>")
