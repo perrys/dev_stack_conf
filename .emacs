@@ -34,7 +34,6 @@
 (use-package vertico
   :ensure t
   :bind (:map vertico-map
-              ;("SPC" . minibuffer-complete-word)
               :map minibuffer-local-map
               ("M-h" . backward-kill-word))
   :custom
@@ -48,6 +47,35 @@
   (marginalia-annotators '(marginalia-anotators-heavy marginalia-annotators-light nil))
   :init
   (marginalia-mode))
+
+(defun scp/org-roam-link-word-at-point ()
+  (interactive)
+  (when (word-at-point t)
+    (re-search-backward "\\b")
+    (mark-word)
+    (call-interactively #'org-roam-insert-immediate)))
+
+(defun scp/org-roam-open-or-link-at-point ()
+  (interactive)
+  (let ((context (org-element-context)))
+    (if (equal (car context) 'link)
+        (org-open-at-point)
+        (scp/org-roam-link-word-at-point))))
+
+(define-minor-mode scp/local-org-roam-mode
+  "Local version of `org-roam-mode'.
+Does nothing, can be used for local keybindings."
+  :init-value nil
+  :global nil
+  :lighter " OR local"
+  :keymap  (let ((map (make-sparse-keymap)))
+             map)
+  :group 'org-roam
+  :require 'org-roam
+  (when scp/local-org-roam-mode
+    (message "Local keybindings for Org Roam enabled")))
+
+(define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
 
 (use-package org-roam
   :ensure t
@@ -123,11 +151,11 @@
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>i") 'org-roam-node-insert)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>I") 'org-roam-node-insert-immediate)
 
-(defun scp-evil-paste-before (count &optional register)
+(defun scp/evil-paste-before (count &optional register)
   (interactive "*P<x>")
   (delete-region (point) (mark))
   (evil-paste-before count register))
-(evil-define-key 'normal 'global (kbd "<leader>p") 'scp-evil-paste-before)
+(evil-define-key 'normal 'global (kbd "<leader>p") 'scp/evil-paste-before)
 
 ;; make _ part of a word:
 (add-hook 'prog-mode-hook
@@ -142,7 +170,7 @@
             (display-line-numbers-mode)
             (setq display-line-numbers 'relative)))
 
-(defun scp-toggle-line-number-display ()
+(defun scp/toggle-line-number-display ()
     "Toggle between absolute and relative line numbers"
   (interactive)
   (if (eq display-line-numbers 'relative) 
@@ -168,18 +196,18 @@
 ;; Change the mode-line color and cursor color/shape by evil state Note, the
 ;; following cursor escape strings work on tmux running on alacritty; they may
 ;; be different for other terminals:
-(defconst scp-default-ui (cons (cons (face-background 'mode-line)
+(defconst scp/default-ui (cons (cons (face-background 'mode-line)
                                             (face-foreground 'mode-line))
                                             "2"))
 
 (add-hook 'post-command-hook
           (lambda ()
-            (let* ((color-and-cursor (cond ((minibufferp) scp-default-ui)
+            (let* ((color-and-cursor (cond ((minibufferp) scp/default-ui)
                                ((evil-insert-state-p) '(("#fb4934" . "#ebdbb2") . "5"))
                                ((evil-emacs-state-p)  '(("#b8bb26" . "#3c3836") . "3"))
                                ((evil-visual-state-p)  '(("#b16286" . "#3c3836") . "2"))
                                ((buffer-modified-p)   '(("#d79921" . "#3c3836") . "2"))
-                               (t scp-default-ui)
+                               (t scp/default-ui)
                                ))
                    (color (car color-and-cursor))
                    (cursor (cdr color-and-cursor)))

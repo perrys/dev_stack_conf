@@ -30,7 +30,10 @@
  '(dired-garbage-files-regexp
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
  '(evil-auto-balance-windows nil)
- '(evil-buffer-regexps '(("^ \\*load\\*") ("COMMIT_EDITMSG" . insert)))
+ '(evil-buffer-regexps
+   '(("^ \\*load\\*")
+     ("COMMIT_EDITMSG" . insert)
+     ("CAPUTRE.*" . insert)))
  '(evil-escape-delay 0.2)
  '(evil-escape-key-sequence "jk")
  '(evil-escape-mode t)
