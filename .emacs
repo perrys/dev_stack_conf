@@ -60,7 +60,7 @@
   (let ((context (org-element-context)))
     (if (equal (car context) 'link)
         (org-open-at-point)
-        (scp/org-roam-link-word-at-point))))
+      (scp/org-roam-link-word-at-point))))
 
 (define-minor-mode scp/local-org-roam-mode
   "Local version of `org-roam-mode'.
@@ -165,13 +165,8 @@ Does nothing, can be used for local keybindings."
 (put 'downcase-region 'disabled nil)
 (setq tramp-default-method "ssh")
 
-(add-hook 'prog-mode-hook
-          (lambda ()
-            (display-line-numbers-mode)
-            (setq display-line-numbers 'relative)))
-
 (defun scp/toggle-line-number-display ()
-    "Toggle between absolute and relative line numbers"
+  "Toggle between absolute and relative line numbers"
   (interactive)
   (if (eq display-line-numbers 'relative) 
       (setq display-line-numbers t)
@@ -197,18 +192,18 @@ Does nothing, can be used for local keybindings."
 ;; following cursor escape strings work on tmux running on alacritty; they may
 ;; be different for other terminals:
 (defconst scp/default-ui (cons (cons (face-background 'mode-line)
-                                            (face-foreground 'mode-line))
-                                            "2"))
+                                     (face-foreground 'mode-line))
+                               "2"))
 
 (add-hook 'post-command-hook
           (lambda ()
             (let* ((color-and-cursor (cond ((minibufferp) scp/default-ui)
-                               ((evil-insert-state-p) '(("#fb4934" . "#ebdbb2") . "5"))
-                               ((evil-emacs-state-p)  '(("#b8bb26" . "#3c3836") . "3"))
-                               ((evil-visual-state-p)  '(("#b16286" . "#3c3836") . "2"))
-                               ((buffer-modified-p)   '(("#d79921" . "#3c3836") . "2"))
-                               (t scp/default-ui)
-                               ))
+                                           ((evil-insert-state-p) '(("#fb4934" . "#ebdbb2") . "5"))
+                                           ((evil-emacs-state-p)  '(("#b8bb26" . "#3c3836") . "3"))
+                                           ((evil-visual-state-p)  '(("#b16286" . "#3c3836") . "2"))
+                                           ((buffer-modified-p)   '(("#d79921" . "#3c3836") . "2"))
+                                           (t scp/default-ui)
+                                           ))
                    (color (car color-and-cursor))
                    (cursor (cdr color-and-cursor)))
               (send-string-to-terminal (concat "\e[" cursor " q"))
@@ -233,3 +228,18 @@ Does nothing, can be used for local keybindings."
         (other-window 1)
         (switch-to-buffer (other-buffer))))))
 (global-set-key (kbd "C-x +") 'window-split-toggle)
+
+
+(setq scp/ediff-saved-display-buffer-alist nil)
+(defun scp/restore-display-buffer-alist ()
+  (setq display-buffer-alist scp/ediff-saved-display-buffer-alist))
+  
+(defun scp/save-display-buffer-alist ()
+  (setq scp/ediff-saved-display-buffer-alist display-buffer-alist)
+  (setq display-buffer-alist nil))
+
+(add-hook
+ 'ediff-load-hook
+ (add-hook 'ediff-before-setup-hook 'scp/save-display-buffer-alist)
+ (add-hook 'ediff-quit-hook 'scp/restore-display-buffer-alist 'append)
+ (add-hook 'ediff-suspend-hook 'scp/restore-display-buffer-alist 'append))
