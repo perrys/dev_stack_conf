@@ -31,25 +31,17 @@
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
  '(dired-listing-switches "-alGD")
  '(display-buffer-alist
-   '(((or
-       (major-mode . info-mode)
-       (major-mode . help-mode))
+   '(((or "\\*e?shell\\*"
+          (derived-mode . compilation-mode))
       (display-buffer-in-side-window)
-      (side . left)
-      (slot . 1)
-      (window-width . 80))
+      (side . bottom)
+      (slot . 0)
+      (window-height . 0.25))
      ((major-mode . dired-mode)
       (display-buffer-in-side-window)
       (side . left)
       (slot . 0)
-      (window-width . 80))
-     ((or
-       "\\*e?shell\\*"
-       (derived-mode . compilation-mode))
-      (display-buffer-in-direction)
-      (direction . bottom)
-      (window . root)
-      (window-height . 0.3))))
+      (window-width . 80))))
  '(display-buffer-base-action
    '((display-buffer-reuse-window display-buffer-in-previous-window)
      (derived-mode . c-mode)))
@@ -79,11 +71,12 @@
    '(org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
+ '(split-height-threshold 100)
  '(switch-to-buffer-in-dedicated-window 'pop)
  '(switch-to-buffer-obey-display-actions t)
  '(tool-bar-mode nil)
  '(warning-suppress-types '((comp)))
- '(window-sides-slots '(2 0 0 0)))
+ '(window-sides-slots '(1 0 0 1)))
  ;;'(gdb-default-window-configuration-file "gdb-window-cfg.el")
  ;;'(completion-styles '(basic partial-completion emacs22 flex))
 (custom-set-faces

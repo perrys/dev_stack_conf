@@ -214,21 +214,49 @@ Does nothing, can be used for local keybindings."
 (unless window-system
   (set-face-background 'default "unspecified-bg"))
 
-(defun window-split-toggle ()
-  "Toggle between horizontal and vertical split with two windows"
-  (interactive)
-  (if (> (length (window-list)) 2)
-      (error "Can't toggle with more than 2 windows!")
-    (let ((func (if (window-full-height-p)
-                    #'split-window-vertically
-                  #'split-window-horizontally)))
-      (delete-other-windows)
-      (funcall func)
-      (save-selected-window
-        (other-window 1)
-        (switch-to-buffer (other-buffer))))))
-(global-set-key (kbd "C-x +") 'window-split-toggle)
+(defun scp/non-side-window-list ()
+  (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
+              (window-list)))
 
+(defun scp/list-equal (l)
+  (= (length (seq-uniq l)) 1))
+
+(defun scp/cycle-list (l)
+  (cons (car (last l)) (butlast l)))
+
+(defun scp/window-split-toggle ()
+  "Toggle between horizontal and vertical split with two (non-side) windows"
+  (interactive)
+  (let ((non-side-windows (scp/non-side-window-list)))
+    (if (not (= (length non-side-windows) 2))
+        (error "Can only toggle 2 windows!"))
+    (save-selected-window
+      (if (not (memq (selected-window) non-side-windows))
+          (select-window (car non-side-windows)))
+      (let* ((window-left-edges (mapcar 'car (mapcar 'window-edges non-side-windows)))
+             (func (if (scp/list-equal window-left-edges)
+                       #'split-window-horizontally
+                     #'split-window-vertically))
+             (non-side-buffer-list (mapcar 'window-buffer non-side-windows)))
+        (delete-window (cadr non-side-windows))
+        (funcall func)
+        (other-window 1)
+        (switch-to-buffer (cadr non-side-buffer-list)))))
+  )
+
+(defun scp/window-cycle ()
+  "Rotate buffers of (non-side) windows"
+  (interactive)
+  (let ((non-side-windows (scp/non-side-window-list)))
+    (if (> (length non-side-windows) 1)
+        (let* ((cycled-buffer-list (scp/cycle-list (mapcar 'window-buffer non-side-windows)))
+               (pairs (cl-pairlis non-side-windows cycled-buffer-list)))
+          (mapc (lambda (pair)
+                  (set-window-buffer (car pair) (cdr pair)))
+                pairs)))))
+
+(global-set-key (kbd "C-x +") 'scp/window-split-toggle)
+(global-set-key (kbd "C-x \\") 'scp/window-cycle)
 
 (setq scp/ediff-saved-display-buffer-alist nil)
 (defun scp/restore-display-buffer-alist ()
