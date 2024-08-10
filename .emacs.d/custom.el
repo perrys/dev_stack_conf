@@ -43,13 +43,16 @@
       (side . left)
       (slot . 0)
       (window-width . 80))
-     ("\\*Compilation\\*" display-buffer-reuse-window)
-     ("\\*e?shell\\*" display-buffer-in-direction
+     ((or
+       "\\*e?shell\\*"
+       (derived-mode . compilation-mode))
+      (display-buffer-in-direction)
       (direction . bottom)
       (window . root)
-      (window-height . 0.3))
-     ((derived-mode . prog-mode)
-      (display-buffer-reuse-window display-buffer-in-previous-window display-buffer-reuse-mode-window))))
+      (window-height . 0.3))))
+ '(display-buffer-base-action
+   '((display-buffer-reuse-window display-buffer-in-previous-window)
+     (derived-mode . c-mode)))
  '(display-line-numbers 'relative)
  '(ediff-split-window-function 'split-window-horizontally)
  '(evil-auto-balance-windows nil)
