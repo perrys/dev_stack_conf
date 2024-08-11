@@ -104,7 +104,6 @@
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
-(setq tramp-default-method "ssh")
 
 ;; Change the mode-line color and cursor color/shape by evil state Note, the
 ;; following cursor escape strings work on tmux running on alacritty; they may
@@ -154,7 +153,7 @@
   (when (word-at-point t)
     (re-search-backward "\\b")
     (mark-word)
-    (call-interactively #'scp/org-roam-insert-immediate)))
+    (call-interactively #'scp/org-roam-node-insert-immediate)))
 
 (defun scp/org-roam-open-or-link-at-point ()
   (interactive)
@@ -249,43 +248,28 @@ Does nothing, can be used for local keybindings."
         (buffer-menu)
         (buffer-menu t)))
 
-(defun scp/buffer-minor-modep (buffer mode)
-  (let ((local-minors (buffer-local-value 'local-minor-modes buffer)))
-    (member mode local-minors)))
-
-(defun scp/display-line-numbers-selected (frame)
-  "Display line numbers for the selected window only"
-  (let* ((selected-window (frame-selected-window frame))
-         (other-windows (seq-remove (lambda (w)
-                                      (eq w selected-window))
-                                    (window-list frame)))
-         (selected-buffer (window-buffer selected-window)))
-    (if (not (minibufferp selected-buffer))
-        (progn
-          (mapc (lambda (window)
-                  (let ((buffer (window-buffer window)))
-                    (if (scp/buffer-minor-modep buffer 'display-line-numbers-mode)
-                        (with-current-buffer buffer
-                          (setq display-line-numbers nil)))))
-                other-windows)
-          (with-current-buffer selected-buffer
-            (setq display-line-numbers 'relative))))))
+(load-library "fast-hooks")
 
 (add-to-list
  'window-selection-change-functions
- 'scp/display-line-numbers-selected)
+ 'scp/selected-window-changed)
+
+(add-to-list
+ 'window-size-change-functions
+ 'scp/frame-size-changed)
 
 (add-to-list
  'display-buffer-alist
  '((or
     "\\*Help\\*"
     "\\*info\\*"
+    "\\*org-roam\\*"
     (major-mode . dired-mode)
     (derived-mode . tabulated-list-mode))
    (display-buffer-in-side-window)
    (side . left)
    (slot . 0)
-   (window-width . 81)))
+   (window-width . 84)))
 
 (add-to-list
  'display-buffer-alist
@@ -298,27 +282,31 @@ Does nothing, can be used for local keybindings."
              
 (global-set-key [f3] 'eshell)
 
+; these were 'kill-sentence 'default-indent-new-line 'mark-paragraph and 'downcase-word
 (global-set-key (kbd "M-k") 'windmove-up)
 (global-set-key (kbd "M-j") 'windmove-down)
 (global-set-key (kbd "M-h") 'windmove-left)
 (global-set-key (kbd "M-l") 'windmove-right)
+
+; these were undefined
 (global-set-key (kbd "C-x |") 'split-window-right)
 (global-set-key (kbd "C-x _") 'split-window-below)
-(global-set-key (kbd "M-<left>") 'shrink-window-horizontally)
-(global-set-key (kbd "M-<right>") 'enlarge-window-horizontally)
 (global-set-key (kbd "M-<up>") 'scp/shrink-window-vertically)
 (global-set-key (kbd "M-<down>") 'scp/enlarge-window-vertically)
+(global-set-key (kbd "M-<delete>") 'shrink-window-horizontally)
+(global-set-key (kbd "M-<insert>") 'enlarge-window-horizontally)
 
+;; these were 'balance-windows and 'shrink-window-if-larger-than-buffer 
 (global-set-key (kbd "C-x +") 'scp/window-split-toggle)
-(global-set-key (kbd "C-x \\") 'scp/window-cycle)
+(global-set-key (kbd "C-x -") 'scp/window-cycle)
 
-(evil-global-set-key 'motion (kbd "C-f") 'scp/evil-scroll-down-and-center)
-(evil-global-set-key 'motion (kbd "C-b") 'scp/evil-scroll-up-and-center)
-
-(evil-global-set-key 'normal (kbd "<leader>d") 'dired)
 (evil-global-set-key 'normal (kbd "<leader>p") 'scp/evil-paste-before)
 
+(evil-define-key '(normal motion visual) 'global (kbd "C-f") 'scp/evil-scroll-down-and-center)
+(evil-define-key '(normal motion visual) 'global (kbd "C-b") 'scp/evil-scroll-up-and-center)
+
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>s") 'scp/buffer-file-menu)
+(evil-define-key '(normal motion visual) 'global (kbd "<leader>d") 'dired)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>h") 'evil-ex-nohighlight)
 
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>x") 'next-error)
@@ -329,8 +317,20 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>r") 'lsp-find-references)
 
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
+
+(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>f") 'org-roam-node-find)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>i") 'org-roam-node-insert)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>I") 'scp/org-roam-node-insert-immediate)
 
+; was 'org-promote-subtree 'org-demote-subtree 'outline-move-subtree-down 'outline-move-subtree-up
+(evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-h") 'windmove-left)
+(evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-l") 'windmove-right)
+(evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-j") 'windmove-down)
+(evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-k") 'windmove-up)
+
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
+

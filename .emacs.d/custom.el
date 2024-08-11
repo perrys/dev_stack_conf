@@ -32,7 +32,7 @@
  '(dired-listing-switches "-alGD")
  '(display-buffer-base-action
    '((display-buffer-reuse-window display-buffer-in-previous-window display-buffer-reuse-mode-window)
-     (derived-mode . c-mode)))
+     (mode org-mode c-mode)))
  '(display-line-numbers 'relative)
  '(ediff-split-window-function 'split-window-horizontally)
  '(fill-column 80)
@@ -40,6 +40,12 @@
  '(indent-tabs-mode nil)
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
+ '(org-link-frame-setup
+   '((vm . vm-visit-folder-other-frame)
+     (vm-imap . vm-visit-imap-folder-other-frame)
+     (gnus . org-gnus-no-new-news)
+     (file . find-file)
+     (wl . wl-other-frame)))
  '(package-selected-packages
    '(org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
@@ -48,6 +54,7 @@
  '(switch-to-buffer-in-dedicated-window 'pop)
  '(switch-to-buffer-obey-display-actions t)
  '(tool-bar-mode nil)
+ '(tramp-default-method "ssh")
  '(warning-suppress-types '((comp)))
  '(window-sides-slots '(1 0 0 1)))
 ;;'(gdb-default-window-configuration-file "gdb-window-cfg.el")

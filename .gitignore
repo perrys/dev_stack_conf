@@ -5,11 +5,9 @@
 !.gitignore
 !.config/kitty/kitty.conf
 !.emacs
-!.emacs.d/custom.el
-!.emacs.d/scp-utils.el
+!.emacs.d/*.el
 !.tmux.conf
 !.zshrc
-!.emacs.d/rust-setup.el
 !.gdbinit
 
 
