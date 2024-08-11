@@ -105,28 +105,6 @@
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 
-;; Change the mode-line color and cursor color/shape by evil state Note, the
-;; following cursor escape strings work on tmux running on alacritty; they may
-;; be different for other terminals:
-(defconst scp/default-ui (cons (cons (face-background 'mode-line)
-                                     (face-foreground 'mode-line))
-                               "2"))
-
-(add-hook 'post-command-hook
-          (lambda ()
-            (let* ((color-and-cursor (cond ((minibufferp) scp/default-ui)
-                                           ((evil-insert-state-p) '(("#fb4934" . "#ebdbb2") . "5"))
-                                           ((evil-emacs-state-p)  '(("#b8bb26" . "#3c3836") . "3"))
-                                           ((evil-visual-state-p)  '(("#b16286" . "#3c3836") . "2"))
-                                           ((buffer-modified-p)   '(("#d79921" . "#3c3836") . "2"))
-                                           (t scp/default-ui)
-                                           ))
-                   (color (car color-and-cursor))
-                   (cursor (cdr color-and-cursor)))
-              (send-string-to-terminal (concat "\e[" cursor " q"))
-              (send-string-to-terminal (concat "\e]12;" (car color) "\a"))
-              (set-face-background 'mode-line (car color))
-              (set-face-foreground 'mode-line (cdr color)))))
 
 (unless window-system
   (set-face-background 'default "unspecified-bg"))
@@ -257,6 +235,9 @@ Does nothing, can be used for local keybindings."
 (add-to-list
  'window-size-change-functions
  'scp/frame-size-changed)
+
+(add-hook 'post-command-hook
+          'scp/update-modeline)
 
 (add-to-list
  'display-buffer-alist
