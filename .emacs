@@ -1,6 +1,10 @@
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
+
+;; ------------------- packages ---------------------
+
+
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
 (setq package-user-dir (expand-file-name "elpa/" user-emacs-directory))
@@ -40,8 +44,7 @@
   (evil-undo-system 'undo-fu)
   (evil-want-fine-undo t)
   :config
-  (evil-mode t)
-  (evil-select-search-module 'evil-search-module 'evil-search))
+  (evil-mode t))
 
 (use-package evil-collection
   :after evil
@@ -50,11 +53,18 @@
   (evil-collection-init))
 
 (use-package evil-escape
+  :after evil
   :custom
   (evil-escape-delay 0.2)
   (evil-escape-key-sequence "jk")
   :config
   (evil-escape-mode t))
+
+(use-package evil-goggles
+  :after evil
+  :ensure t
+  :config
+  (evil-goggles-mode))
 
 (use-package flycheck :ensure)
 
@@ -155,27 +165,24 @@
   (add-hook 'prog-mode-hook 'yas-minor-mode)
   (add-hook 'text-mode-hook 'yas-minor-mode))
 
+
+;; ------------------- other settings ---------------------
+
+
 (load custom-file)
 
 (evil-set-leader nil (kbd "C-SPC"))
 (evil-set-leader '(normal visual motion) (kbd "SPC"))
-(defun scp/evil-send-leader ()
-  (interactive)
-  (setq prefix-arg current-prefix-arg)
-  (push '(t . leader) unread-command-events))
-(add-hook 'dired-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
-;(add-hook 'org-roam-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
-
-;; make _ part of a word:
-(add-hook 'prog-mode-hook
-          (lambda () (modify-syntax-entry ?_ "w")))
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 
-
 (unless window-system
   (set-face-background 'default "unspecified-bg"))
+
+
+;; ------------------- function definitions ---------------------
+
 
 (defun scp/non-side-window-list ()
   (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
@@ -303,6 +310,22 @@ Does nothing, can be used for local keybindings."
       (buffer-menu)
     (buffer-menu t)))
 
+(defun scp/evil-send-leader ()
+  (interactive)
+  (setq prefix-arg current-prefix-arg)
+  (push '(t . leader) unread-command-events))
+
+
+;; ------------------- hooks ---------------------
+
+
+(add-hook 'dired-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
+;(add-hook 'org-roam-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
+
+;; make _ part of a word:
+(add-hook 'prog-mode-hook
+          (lambda () (modify-syntax-entry ?_ "w")))
+
 (load-file (file-name-concat user-emacs-directory "fast-hooks.elc"))
 
 (add-to-list
@@ -337,6 +360,10 @@ Does nothing, can be used for local keybindings."
    (side . bottom)
    (slot . 0)
    (window-height . 0.25)))
+
+
+;; ------------------- keybindings ---------------------
+
 
 (global-set-key [f3] 'eshell)
 

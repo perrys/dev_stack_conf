@@ -48,7 +48,7 @@
      (file . find-file)
      (wl . wl-other-frame)))
  '(package-selected-packages
-   '(org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(server-mode t)
  '(split-height-threshold 100)
