@@ -35,6 +35,7 @@
      (mode org-mode c-mode)))
  '(display-line-numbers 'relative)
  '(ediff-split-window-function 'split-window-horizontally)
+ '(evil-search-module 'evil-search)
  '(fill-column 80)
  '(gdb-many-windows t)
  '(indent-tabs-mode nil)

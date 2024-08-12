@@ -26,7 +26,6 @@
      ("COMMIT_EDITMSG" . insert)
      ("CAPUTRE.*" . insert)))
   (evil-move-beyond-eol nil)
-  (evil-search-module 'evil-search)
   (evil-undo-system 'undo-fu)
   (evil-want-fine-undo t)
   :config
@@ -55,7 +54,7 @@
               :map minibuffer-local-map
               ("M-h" . backward-kill-word))
   :custom
-  (vertico-cycle t)
+  (vertico-cycle nil)
   :init
   (vertico-mode))
 
@@ -158,6 +157,15 @@ Does nothing, can be used for local keybindings."
   (delete-region (point) (mark))
   (evil-paste-before count register))
 
+(defun scp/add-region-to-search-history ()
+  "Add region to the search history so I can use cgn."
+  (interactive)
+  (let ((region (buffer-substring-no-properties (point) (mark))))
+    (push region evil-ex-search-history)
+    (setq evil-ex-search-pattern (evil-ex-make-search-pattern region))
+    (evil-ex-search-activate-highlight evil-ex-search-pattern)
+    (deactivate-mark)))
+
 (defun scp/toggle-line-number-display ()
   "Toggle between absolute and relative line numbers"
   (interactive)
@@ -223,8 +231,8 @@ Does nothing, can be used for local keybindings."
   "Bring up the buffer menu, by default WITHOUT non-file buffers)"
   (interactive "P")
   (if ARG
-        (buffer-menu)
-        (buffer-menu t)))
+      (buffer-menu)
+    (buffer-menu t)))
 
 (load-library "fast-hooks")
 
@@ -260,16 +268,16 @@ Does nothing, can be used for local keybindings."
    (side . bottom)
    (slot . 0)
    (window-height . 0.25)))
-             
+
 (global-set-key [f3] 'eshell)
 
-; these were 'kill-sentence 'default-indent-new-line 'mark-paragraph and 'downcase-word
+;; these were 'kill-sentence 'default-indent-new-line 'mark-paragraph and 'downcase-word
 (global-set-key (kbd "M-k") 'windmove-up)
 (global-set-key (kbd "M-j") 'windmove-down)
 (global-set-key (kbd "M-h") 'windmove-left)
 (global-set-key (kbd "M-l") 'windmove-right)
 
-; these were undefined
+;; these were undefined
 (global-set-key (kbd "C-x |") 'split-window-right)
 (global-set-key (kbd "C-x _") 'split-window-below)
 (global-set-key (kbd "M-<up>") 'scp/shrink-window-vertically)
@@ -282,6 +290,8 @@ Does nothing, can be used for local keybindings."
 (global-set-key (kbd "C-x -") 'scp/window-cycle)
 
 (evil-global-set-key 'normal (kbd "<leader>p") 'scp/evil-paste-before)
+
+(evil-define-key '(visual) 'global (kbd ".") 'scp/add-region-to-search-history)
 
 (evil-define-key '(normal motion visual) 'global (kbd "C-f") 'scp/evil-scroll-down-and-center)
 (evil-define-key '(normal motion visual) 'global (kbd "C-b") 'scp/evil-scroll-up-and-center)
@@ -307,7 +317,7 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>i") 'org-roam-node-insert)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>I") 'scp/org-roam-node-insert-immediate)
 
-; was 'org-promote-subtree 'org-demote-subtree 'outline-move-subtree-down 'outline-move-subtree-up
+;; was 'org-promote-subtree 'org-demote-subtree 'outline-move-subtree-down 'outline-move-subtree-up
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-h") 'windmove-left)
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-l") 'windmove-right)
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-j") 'windmove-down)
