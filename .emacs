@@ -1,18 +1,29 @@
 
-(setq user-emacs-directory (directory-file-name "~/.emacs.d"))
-(add-to-list 'load-path user-emacs-directory)
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
 (setq package-user-dir (expand-file-name "elpa/" user-emacs-directory))
 (package-initialize)
+
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
-(eval-and-compile
-  (setq use-package-always-ensure t
-        use-package-expand-minimally t))
+
+(use-package company
+  :ensure
+  :custom
+  (company-idle-delay 0.2) ;; how long to wait until popup
+  ;; (company-begin-commands nil) ;; uncomment to disable popup
+  :bind
+  (:map company-active-map
+	("M-j". company-select-next)
+	("M-k". company-select-previous)
+	("M-<". company-select-first)
+	("M->". company-select-last))
+  (:map company-mode-map
+        ("<tab>". tab-indent-or-complete)
+        ("TAB". tab-indent-or-complete)))
 
 (use-package evil
   :ensure t
@@ -29,7 +40,8 @@
   (evil-undo-system 'undo-fu)
   (evil-want-fine-undo t)
   :config
-  (evil-mode t))
+  (evil-mode t)
+  (evil-select-search-module 'evil-search-module 'evil-search))
 
 (use-package evil-collection
   :after evil
@@ -44,7 +56,83 @@
   :config
   (evil-escape-mode t))
 
+(use-package flycheck :ensure)
+
+(use-package lsp-mode
+  :ensure
+  :commands lsp
+  :custom
+  (lsp-idle-delay 0.2)
+  (lsp-inlay-hint-enable t)
+  (lsp-rust-analyzer-cargo-watch-command "clippy")
+  (lsp-rust-analyzer-lens-enable nil)
+  (lsp-rust-analyzer-binding-mode-hints t)
+  (lsp-rust-analyzer-display-chaining-hints t)
+  (lsp-rust-analyzer-display-closure-return-type-hints t)
+  (lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
+  (lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
+  (lsp-rust-analyzer-display-parameter-hints nil)
+  (lsp-rust-analyzer-display-reborrow-hints nil)
+  :config
+  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+
+(use-package lsp-ui
+  :ensure
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-doc-enable nil) ; disable ui-doc entirely
+  (lsp-ui-doc-delay 0.2)
+  (lsp-ui-doc-show-with-cursor t)
+  (lsp-ui-doc-show-with-mouse t)
+  (lsp-ui-peek-always-show nil)
+  (lsp-ui-sideline-enable nil) ; disable the sideline entirely
+  (lsp-ui-sideline-show-hover nil)
+  (lsp-ui-sideline-show-code-actions t)
+  (lsp-ui-sideline-show-diagnostics t)
+  (lsp-ui-sideline-delay 1.0))
+
 (use-package magit)
+
+(use-package marginalia
+  :after vertico
+  :ensure t
+  :custom
+  (marginalia-annotators '(marginalia-anotators-heavy marginalia-annotators-light nil))
+  :init
+  (marginalia-mode))
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package org-roam
+  :ensure t
+  :custom
+  (org-roam-directory "~/org-roam")
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert))
+  :config
+  (org-roam-db-autosync-enable))
+
+(use-package rustic
+  ;; From https://robert.kra.hn/posts/rust-emacs-setup/
+  :if (package-installed-p 'rustic)
+  :bind (:map rustic-mode-map
+              ("M-?" . lsp-find-references)
+              ([f4] . lsp-ui-doc-glance)
+              ([f5] . flycheck-list-errors)
+              ([f1] . lsp-execute-code-action)
+              ([f2] . lsp-rename)
+              ([f12] . lsp-find-type-definition)
+              ("M-SPC" . lsp-inlay-hints-mode)
+              ("C-c C-c q" . lsp-workspace-restart)
+              ("C-c C-c Q" . lsp-workspace-shutdown)
+              ("C-c C-c s" . lsp-rust-analyzer-status))
+  :config
+  (setq rustic-format-on-save t))
 
 (use-package undo-fu)
 
@@ -58,33 +146,14 @@
   :init
   (vertico-mode))
 
-(use-package marginalia
-  :after vertico
-  :ensure t
-  :custom
-  (marginalia-annotators '(marginalia-anotators-heavy marginalia-annotators-light nil))
-  :init
-  (marginalia-mode))
-
-(use-package org-roam
-  :ensure t
-  :custom
-  (org-roam-directory "~/org-roam")
-  :bind (("C-c n l" . org-roam-buffer-toggle)
-         ("C-c n f" . org-roam-node-find)
-         ("C-c n i" . org-roam-node-insert))
-  :config
-  (org-roam-db-autosync-enable))
-
-(use-package orderless
-  :ensure t
-  :custom
-  (completion-styles '(orderless basic))
-  (completion-category-overrides '((file (styles basic partial-completion)))))
-
 (use-package yaml)
 
-(load-library "rust-setup.el") 
+(use-package yasnippet
+  :ensure
+  :config
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode))
 
 (load custom-file)
 
@@ -234,7 +303,7 @@ Does nothing, can be used for local keybindings."
       (buffer-menu)
     (buffer-menu t)))
 
-(load-library "fast-hooks")
+(load-file (file-name-concat user-emacs-directory "fast-hooks.elc"))
 
 (add-to-list
  'window-selection-change-functions
