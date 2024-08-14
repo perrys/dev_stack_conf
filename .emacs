@@ -29,11 +29,21 @@
         ("<tab>". tab-indent-or-complete)
         ("TAB". tab-indent-or-complete)))
 
+(use-package diminish
+  :config
+  (diminish 'yas-minor-mode "")
+  (diminish 'abbreve-mode "")
+  (diminish 'evil-goggles-mode "")
+  (diminish 'evil-escape-mode "")
+  (diminish 'evil-collection-unimpaired-mode "")
+  (eval-after-load "company" '(diminish 'company-mode)))
+
 (use-package evil
   :ensure t
   :init
   (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
   (setq evil-want-keybinding nil)
+  (setq evil-want-C-i-jump nil)
   :custom
   (evil-auto-balance-windows nil)
   (evil-buffer-regexps
@@ -41,6 +51,7 @@
      ("COMMIT_EDITMSG" . insert)
      ("CAPUTRE.*" . insert)))
   (evil-move-beyond-eol nil)
+  (evil-search-module 'evil-search)
   (evil-undo-system 'undo-fu)
   (evil-want-fine-undo t)
   :config
@@ -71,35 +82,36 @@
 (use-package lsp-mode
   :ensure
   :commands lsp
+  :config
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  (add-hook 'lsp-mode-hook 'lsp-ui-mode)
   :custom
   (lsp-idle-delay 0.2)
   (lsp-inlay-hint-enable t)
-  (lsp-rust-analyzer-cargo-watch-command "clippy")
-  (lsp-rust-analyzer-lens-enable nil)
   (lsp-rust-analyzer-binding-mode-hints t)
+  (lsp-rust-analyzer-cargo-watch-command "clippy")
   (lsp-rust-analyzer-display-chaining-hints t)
   (lsp-rust-analyzer-display-closure-return-type-hints t)
   (lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
   (lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
   (lsp-rust-analyzer-display-parameter-hints nil)
   (lsp-rust-analyzer-display-reborrow-hints nil)
-  :config
-  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+  (lsp-rust-analyzer-lens-enable nil))
 
 (use-package lsp-ui
   :ensure
   :commands lsp-ui-mode
   :custom
-  (lsp-ui-doc-enable nil) ; disable ui-doc entirely
   (lsp-ui-doc-delay 0.2)
+  (lsp-ui-doc-enable nil) ; disable ui-doc entirely
   (lsp-ui-doc-show-with-cursor t)
   (lsp-ui-doc-show-with-mouse t)
   (lsp-ui-peek-always-show nil)
+  (lsp-ui-sideline-delay 1.0)
   (lsp-ui-sideline-enable nil) ; disable the sideline entirely
-  (lsp-ui-sideline-show-hover nil)
   (lsp-ui-sideline-show-code-actions t)
   (lsp-ui-sideline-show-diagnostics t)
-  (lsp-ui-sideline-delay 1.0))
+  (lsp-ui-sideline-show-hover nil))
 
 (use-package magit)
 
