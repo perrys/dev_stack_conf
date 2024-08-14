@@ -13,6 +13,10 @@
 ;; rustic
 ;; undo-fu
 
+(defun scp/debug-display-window (buf config)
+  (message (format "buffer: %s, config: %s" buf config))
+  nil)
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -31,7 +35,7 @@
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
  '(dired-listing-switches "-alGD")
  '(display-buffer-base-action
-   '((display-buffer-reuse-window display-buffer-in-previous-window display-buffer-reuse-mode-window)
+   '((display-buffer-reuse-window display-buffer-in-previous-window display-buffer-reuse-mode-window display-buffer-use-some-window)
      (mode org-mode c-mode)))
  '(display-line-numbers 'relative)
  '(ediff-split-window-function 'split-window-horizontally)
