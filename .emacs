@@ -15,7 +15,7 @@
   (package-install 'use-package))
 
 (use-package company
-  :ensure
+  :ensure t
   :custom
   (company-idle-delay 0.2) ;; how long to wait until popup
   ;; (company-begin-commands nil) ;; uncomment to disable popup
@@ -65,6 +65,7 @@
 
 (use-package evil-escape
   :after evil
+  :ensure t
   :custom
   (evil-escape-delay 0.2)
   (evil-escape-key-sequence "jk")
@@ -77,10 +78,11 @@
   :config
   (evil-goggles-mode))
 
-(use-package flycheck :ensure)
+(use-package flycheck
+  :ensure t)
 
 (use-package lsp-mode
-  :ensure
+  :ensure t
   :commands lsp
   :config
   (add-hook 'before-save-hook 'delete-trailing-whitespace)
@@ -99,7 +101,7 @@
   (lsp-rust-analyzer-lens-enable nil))
 
 (use-package lsp-ui
-  :ensure
+  :ensure t
   :commands lsp-ui-mode
   :custom
   (lsp-ui-doc-delay 0.2)
@@ -171,7 +173,7 @@
 (use-package yaml)
 
 (use-package yasnippet
-  :ensure
+  :ensure t
   :config
   (yas-reload-all)
   (add-hook 'prog-mode-hook 'yas-minor-mode)
@@ -196,55 +198,6 @@
 ;; ------------------- function definitions ---------------------
 
 
-(defun scp/non-side-window-list ()
-  (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
-              (window-list)))
-
-(defun scp/list-equal (l)
-  (= (length (seq-uniq l)) 1))
-
-(defun scp/cycle-list (l)
-  (cons (car (last l)) (butlast l)))
-
-(defun scp/org-roam-node-insert-immediate (arg &rest args)
-  (interactive "P")
-  (let ((args (cons arg args))
-        (org-roam-capture-templates (list (append (car org-roam-capture-templates)
-                                                  '(:immediate-finish t)))))
-    (apply #'org-roam-node-insert args)))
-
-(defun scp/org-roam-link-word-at-point ()
-  (interactive)
-  (when (word-at-point t)
-    (re-search-backward "\\b")
-    (mark-word)
-    (call-interactively #'scp/org-roam-node-insert-immediate)))
-
-(defun scp/org-roam-open-or-link-at-point ()
-  (interactive)
-  (let ((context (org-element-context)))
-    (if (equal (car context) 'link)
-        (org-open-at-point)
-      (scp/org-roam-link-word-at-point))))
-
-(define-minor-mode scp/local-org-roam-mode
-  "Local version of `org-roam-mode'.
-Does nothing, can be used for local keybindings."
-  :init-value nil
-  :global nil
-  :lighter " OR local"
-  :keymap  (let ((map (make-sparse-keymap)))
-             map)
-  :group 'org-roam
-  :require 'org-roam
-  (when scp/local-org-roam-mode
-    (message "Local keybindings for Org Roam enabled")))
-
-(defun scp/evil-paste-before (count &optional register)
-  (interactive "*P<x>")
-  (delete-region (point) (mark))
-  (evil-paste-before count register))
-
 (defun scp/add-region-to-search-history ()
   "Add region to the search history so I can use cgn."
   (interactive)
@@ -254,12 +207,23 @@ Does nothing, can be used for local keybindings."
     (evil-ex-search-activate-highlight evil-ex-search-pattern)
     (deactivate-mark)))
 
-(defun scp/toggle-line-number-display ()
-  "Toggle between absolute and relative line numbers"
-  (interactive)
-  (if (eq display-line-numbers 'relative) 
-      (setq display-line-numbers t)
-    (setq display-line-numbers 'relative)))
+(defun scp/buffer-file-menu (&optional ARG)
+  "Bring up the buffer menu, by default WITHOUT non-file buffers)"
+  (interactive "P")
+  (if ARG
+      (buffer-menu)
+    (buffer-menu t)))
+
+(defun scp/enlarge-window-vertically (delta)
+  "Make selected window DELTA columns taller."
+  (interactive "p")
+  (enlarge-window delta nil))
+
+(defun scp/evil-paste-before (count &optional register)
+  "Override the region without adding it into the register"
+  (interactive "*P<x>")
+  (delete-region (point) (mark))
+  (evil-paste-before count register))
 
 (defun scp/evil-scroll-down-and-center ()
   "Center screen on cursor after scrolling"
@@ -274,15 +238,76 @@ Does nothing, can be used for local keybindings."
   (evil-scroll-up 0)
   (evil-scroll-line-to-center nil))
 
-(defun scp/enlarge-window-vertically (delta)
-  "Make selected window DELTA columns taller."
-  (interactive "p")
-  (enlarge-window delta nil))
+(defun scp/evil-send-leader ()
+  (interactive)
+  (setq prefix-arg current-prefix-arg)
+  (push '(t . leader) unread-command-events))
+
+(defun scp/list-equal (l)
+  (= (length (seq-uniq l)) 1))
+
+(define-minor-mode scp/local-org-roam-mode
+  "Local version of `org-roam-mode'.
+Does nothing, can be used for local keybindings."
+  :init-value nil
+  :global nil
+  :lighter " OR local"
+  :keymap  (let ((map (make-sparse-keymap)))
+             map)
+  :group 'org-roam
+  :require 'org-roam
+  (when scp/local-org-roam-mode
+    (message "Local keybindings for Org Roam enabled")))
+
+(defun scp/non-side-window-list ()
+  (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
+              (window-list)))
+
+(defun scp/org-roam-link-word-at-point ()
+  (interactive)
+  (when (word-at-point t)
+    (re-search-backward "\\b")
+    (mark-word)
+    (call-interactively #'scp/org-roam-node-insert-immediate)))
+
+(defun scp/org-roam-node-insert-immediate (arg &rest args)
+  (interactive "P")
+  (let ((args (cons arg args))
+        (org-roam-capture-templates (list (append (car org-roam-capture-templates)
+                                                  '(:immediate-finish t)))))
+    (apply #'org-roam-node-insert args)))
+
+(defun scp/org-roam-open-or-link-at-point ()
+  (interactive)
+  (let ((context (org-element-context)))
+    (if (equal (car context) 'link)
+        (org-open-at-point)
+      (scp/org-roam-link-word-at-point))))
 
 (defun scp/shrink-window-vertically (delta)
   "Make selected window DELTA columns shorter."
   (interactive "p")
   (shrink-window delta nil))
+
+(defun scp/toggle-line-number-display ()
+  "Toggle between absolute and relative line numbers"
+  (interactive)
+  (if (eq display-line-numbers 'relative) 
+      (setq display-line-numbers t)
+    (setq display-line-numbers 'relative)))
+
+(defun scp/window-cycle ()
+  "Rotate buffers of (non-side) windows"
+  (interactive)
+  (let ((non-side-windows (scp/non-side-window-list))
+        (cycle-list-fn (lambda (l)
+                         (cons (car (last l)) (butlast l)))))
+    (if (> (length non-side-windows) 1)
+        (let* ((cycled-buffer-list (funcall cycle-list-fn (mapcar 'window-buffer non-side-windows)))
+               (pairs (cl-pairlis non-side-windows cycled-buffer-list)))
+          (mapc (lambda (pair)
+                  (set-window-buffer (car pair) (cdr pair)))
+                pairs)))))
 
 (defun scp/window-split-toggle ()
   "Toggle between horizontal and vertical split with two (non-side) windows"
@@ -301,31 +326,7 @@ Does nothing, can be used for local keybindings."
         (delete-window (cadr non-side-windows))
         (funcall func)
         (other-window 1)
-        (switch-to-buffer (cadr non-side-buffer-list)))))
-  )
-
-(defun scp/window-cycle ()
-  "Rotate buffers of (non-side) windows"
-  (interactive)
-  (let ((non-side-windows (scp/non-side-window-list)))
-    (if (> (length non-side-windows) 1)
-        (let* ((cycled-buffer-list (scp/cycle-list (mapcar 'window-buffer non-side-windows)))
-               (pairs (cl-pairlis non-side-windows cycled-buffer-list)))
-          (mapc (lambda (pair)
-                  (set-window-buffer (car pair) (cdr pair)))
-                pairs)))))
-
-(defun scp/buffer-file-menu (&optional ARG)
-  "Bring up the buffer menu, by default WITHOUT non-file buffers)"
-  (interactive "P")
-  (if ARG
-      (buffer-menu)
-    (buffer-menu t)))
-
-(defun scp/evil-send-leader ()
-  (interactive)
-  (setq prefix-arg current-prefix-arg)
-  (push '(t . leader) unread-command-events))
+        (switch-to-buffer (cadr non-side-buffer-list))))))
 
 
 ;; ------------------- hooks ---------------------
