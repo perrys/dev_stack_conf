@@ -21,10 +21,10 @@
   ;; (company-begin-commands nil) ;; uncomment to disable popup
   :bind
   (:map company-active-map
-	("M-j". company-select-next)
-	("M-k". company-select-previous)
-	("M-<". company-select-first)
-	("M->". company-select-last))
+        ("M-j". company-select-next)
+        ("M-k". company-select-previous)
+        ("M-<". company-select-first)
+        ("M->". company-select-last))
   (:map company-mode-map
         ("<tab>". tab-indent-or-complete)
         ("TAB". tab-indent-or-complete)))
@@ -32,7 +32,7 @@
 (use-package diminish
   :config
   (diminish 'yas-minor-mode "")
-  (diminish 'abbreve-mode "")
+  (diminish 'abbrev-mode "")
   (diminish 'evil-goggles-mode "")
   (diminish 'evil-escape-mode "")
   (diminish 'evil-collection-unimpaired-mode "")
@@ -415,11 +415,6 @@ Does nothing, can be used for local keybindings."
 
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>R") 'lsp-find-definition)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>r") 'lsp-find-references)
-
-(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
-(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
-(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
-(evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
 
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>f") 'org-roam-node-find)
