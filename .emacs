@@ -141,6 +141,8 @@
   :config
   (org-roam-db-autosync-enable))
 
+(require 'project)
+
 (use-package rustic
   ;; From https://robert.kra.hn/posts/rust-emacs-setup/
   :if (package-installed-p 'rustic)
@@ -214,6 +216,12 @@
       (buffer-menu)
     (buffer-menu t)))
 
+(defun scp/call-func-maybe-project (regular-func project-func)
+  (let ((func (if (project-current)
+                  project-func
+                regular-func)))
+    (call-interactively func)))
+
 (defun scp/enlarge-window-vertically (delta)
   "Make selected window DELTA columns taller."
   (interactive "p")
@@ -242,6 +250,16 @@
   (interactive)
   (setq prefix-arg current-prefix-arg)
   (push '(t . leader) unread-command-events))
+
+(defun scp/find-file-maybe-project ()
+  "Proxy for find-file which will use project-find-file if there is a project"
+  (interactive)
+  (scp/call-func-maybe-project #'find-file #'project-find-file))
+
+(defun scp/list-buffers-maybe-project ()
+  "Proxy for buffer-menu which will use project-list-buffers if there is a project"
+  (interactive)
+  (scp/call-func-maybe-project #'scp/buffer-file-menu #'project-list-buffers))
 
 (defun scp/list-equal (l)
   (= (length (seq-uniq l)) 1))
@@ -292,7 +310,7 @@ Does nothing, can be used for local keybindings."
 (defun scp/toggle-line-number-display ()
   "Toggle between absolute and relative line numbers"
   (interactive)
-  (if (eq display-line-numbers 'relative) 
+  (if (eq display-line-numbers 'relative)
       (setq display-line-numbers t)
     (setq display-line-numbers 'relative)))
 
@@ -359,6 +377,10 @@ Does nothing, can be used for local keybindings."
     "\\*info\\*"
     "\\*org-roam\\*"
     (major-mode . dired-mode)
+    (lambda (buf config)
+      (with-current-buffer buf
+        (and (not (derived-mode-p 'magit-mode))
+             (derived-mode-p 'special-mode))))
     (derived-mode . tabulated-list-mode))
    (display-buffer-in-side-window)
    (side . left)
@@ -394,7 +416,7 @@ Does nothing, can be used for local keybindings."
 (global-set-key (kbd "M-<delete>") 'shrink-window-horizontally)
 (global-set-key (kbd "M-<insert>") 'enlarge-window-horizontally)
 
-;; these were 'balance-windows and 'shrink-window-if-larger-than-buffer 
+;; these were 'balance-windows and 'shrink-window-if-larger-than-buffer
 (global-set-key (kbd "C-x +") 'scp/window-split-toggle)
 (global-set-key (kbd "C-x -") 'scp/window-cycle)
 
@@ -405,7 +427,8 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'global (kbd "C-f") 'scp/evil-scroll-down-and-center)
 (evil-define-key '(normal motion visual) 'global (kbd "C-b") 'scp/evil-scroll-up-and-center)
 
-(evil-define-key '(normal motion visual) 'global (kbd "<leader>s") 'scp/buffer-file-menu)
+(evil-define-key '(normal motion visual) 'global (kbd "<leader>s") 'scp/list-buffers-maybe-project)
+(evil-define-key '(normal motion visual) 'global (kbd "<leader>f") 'scp/find-file-maybe-project)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>d") 'dired)
 (evil-define-key '(normal motion visual) 'global (kbd "<leader>h") 'evil-ex-nohighlight)
 
@@ -428,4 +451,3 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-k") 'windmove-up)
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
-

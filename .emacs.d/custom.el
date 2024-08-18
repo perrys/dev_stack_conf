@@ -62,6 +62,7 @@
  '(switch-to-buffer-obey-display-actions t)
  '(tool-bar-mode nil)
  '(tramp-default-method "ssh")
+ '(truncate-partial-width-windows 85)
  '(visible-bell t)
  '(warning-suppress-types '((comp)))
  '(window-sides-slots '(1 0 0 1)))
