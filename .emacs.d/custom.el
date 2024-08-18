@@ -31,6 +31,7 @@
  '(custom-enabled-themes '(gruvbox-dark-hard))
  '(custom-safe-themes
    '("d445c7b530713eac282ecdeea07a8fa59692c83045bf84dd112dd738c7bcad1d" "d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" default))
+ '(dap-lldb-debug-program '("/usr/bin/lldb-dap-18"))
  '(default-frame-alist '((width . 120) (height . 50) (menu-bar-lines . 1)))
  '(dired-garbage-files-regexp
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
@@ -53,7 +54,7 @@
      (file . find-file)
      (wl . wl-other-frame)))
  '(package-selected-packages
-   '(protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(dap-mode protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values '((index-tabs-mode) (c-indentation-style . elemetel)))
  '(select-enable-primary t)
  '(server-mode t)
@@ -65,7 +66,8 @@
  '(truncate-partial-width-windows 85)
  '(visible-bell t)
  '(warning-suppress-types '((comp)))
- '(window-sides-slots '(1 0 0 1)))
+ ;; '(window-sides-slots '(1 0 0 1))
+ )
 ;;'(gdb-default-window-configuration-file "gdb-window-cfg.el")
 ;;'(completion-styles '(basic partial-completion emacs22 flex))
 (custom-set-faces

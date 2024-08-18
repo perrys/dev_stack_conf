@@ -29,6 +29,27 @@
         ("<tab>". tab-indent-or-complete)
         ("TAB". tab-indent-or-complete)))
 
+(use-package dap-mode
+  :ensure t
+  :config
+  (dap-mode t)
+  (dap-ui-mode t)
+  (require 'dap-lldb)
+  ;; https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap
+  (dap-register-debug-template
+   "2022/day10"
+   (list :type "lldb-vscode"
+         :request "launch"
+         :name " Configuration"
+         :program "${workspaceFolder}/target/debug/day10"
+         :args '("${workspaceFolder}/../input/day10.dat")
+         :stopOnEntry t
+         :cwd "${workspaceFolder}"))
+  :custom
+  (dap-auto-configure-features '(breakpoints sessions expressions controls))
+ )
+
+
 (use-package diminish
   :config
   (diminish 'yas-minor-mode "")
