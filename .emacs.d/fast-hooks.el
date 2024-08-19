@@ -25,16 +25,15 @@
                                       (eq w selected-window))
                                     (window-list frame)))
          (selected-buffer (window-buffer selected-window)))
-    (if (not (minibufferp selected-buffer))
-        (progn
-          (mapc (lambda (window)
-                  (let ((buffer (window-buffer window)))
-                    (if (buffer-local-value 'display-line-numbers buffer)
-                        (with-current-buffer buffer
-                          (setq-local display-line-numbers nil)))))
-                other-windows)
-          (with-current-buffer selected-buffer
-            (setq-local display-line-numbers 'relative))))))
+    (when (not (minibufferp selected-buffer))
+      (mapc (lambda (window)
+              (let ((buffer (window-buffer window)))
+                (if (buffer-local-value 'display-line-numbers buffer)
+                    (with-current-buffer buffer
+                      (setq-local display-line-numbers nil)))))
+            other-windows)
+      (with-current-buffer selected-buffer
+        (setq-local display-line-numbers 'relative)))))
 
 (add-to-list 'scp/selected-window-changed-hook
              'scp/display-line-numbers-selected)
