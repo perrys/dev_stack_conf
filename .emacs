@@ -248,10 +248,29 @@
   (interactive "p")
   (enlarge-window delta nil))
 
+(defun scp/evil-ex-start-search-with-region ()
+  "If there is a visual selection, make it the default search term"
+  (unless (minibufferp)
+    (error "minibuffer not active"))
+  (let ((selection
+         (with-current-buffer (other-buffer (current-buffer) 1)
+           (when (evil-visual-state-p)
+             (let ((selection (buffer-substring-no-properties (region-beginning) (+ 1 (region-end)))))
+               (evil-normal-state)
+               selection)))))
+    (when selection   
+      (evil-ex-remove-default)
+      (insert selection)
+      (evil-ex-search-activate-highlight (list selection
+                                               evil-ex-search-count
+                                               evil-ex-search-direction)))))
+
+(advice-add #'evil-ex-search-start-session :after #'scp/evil-ex-start-search-with-region)
+
 (defun scp/evil-paste-before (count &optional register)
   "Override the region without adding it into the register"
   (interactive "*P<x>")
-  (delete-region (point) (mark))
+  (delete-region (region-beginning) (region-end))
   (evil-paste-before count register))
 
 (defun scp/evil-scroll-down-and-center ()
