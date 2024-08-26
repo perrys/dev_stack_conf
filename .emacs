@@ -34,19 +34,16 @@
   :config
   (dap-mode t)
   (dap-ui-mode t)
+  (require 'dap-gdb)
   (require 'dap-lldb)
-  ;; https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap
-  (dap-register-debug-template
-   "2022/day10"
-   (list :type "lldb-vscode"
-         :request "launch"
-         :name " Configuration"
-         :program "${workspaceFolder}/target/debug/day10"
-         :args '("${workspaceFolder}/../input/day10.dat")
-         :stopOnEntry t
-         :cwd "${workspaceFolder}"))
+  (custom-set-faces
+   '(dap-ui-pending-breakpoint-face ((t (:background "darkred"))))
+   '(dap-ui-verified-breakpoint-face ((t (:background "darkblue")))))
+  ;(setq dap-gdb-debug-program '("rust-gdb" "-i" "dap"))
   :custom
-  (dap-auto-configure-features '(breakpoints sessions expressions controls))
+  (dap-auto-configure-features '(breakpoints locals sessions expressions controls))
+  (dap-lldb-debug-program '("lldb-dap-18"))
+  (dap-ui-variable-length 1000)
  )
 
 
