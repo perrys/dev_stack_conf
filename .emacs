@@ -106,7 +106,7 @@
   :ensure t
   :commands lsp
   :config
-  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  (add-hook 'before-save-hook 'scp/maybe-delete-trailing-whitespace)
   (add-hook 'lsp-mode-hook 'lsp-ui-mode)
   :custom
   (lsp-idle-delay 0.2)
@@ -258,7 +258,7 @@
              (let ((selection (buffer-substring-no-properties (region-beginning) (+ 1 (region-end)))))
                (evil-normal-state)
                selection)))))
-    (when selection   
+    (when selection
       (evil-ex-remove-default)
       (insert selection)
       (evil-ex-search-activate-highlight (list selection
@@ -316,6 +316,10 @@ Does nothing, can be used for local keybindings."
   :require 'org-roam
   (when scp/local-org-roam-mode
     (message "Local keybindings for Org Roam enabled")))
+
+(defun scp/maybe-delete-trailing-whitespace ()
+  (when scp/delete-trailing-whitespace
+    (delete-trailing-whitespace)))
 
 (defun scp/non-side-window-list ()
   (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
