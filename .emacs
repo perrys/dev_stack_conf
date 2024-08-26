@@ -491,4 +491,10 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-j") 'windmove-down)
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-k") 'windmove-up)
 
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "<f8>") 'dap-continue)
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "<f10>") 'dap-next)
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "<f11>") 'dap-step-in)
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "S-<f11>") 'dap-step-out)
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "C-c b") 'dap-breakpoint-toggle)
+
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
