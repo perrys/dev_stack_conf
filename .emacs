@@ -1,3 +1,4 @@
+;;  -*- lexical-binding: t; -*-
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
@@ -36,6 +37,7 @@
   (dap-ui-mode t)
   (require 'dap-gdb)
   (require 'dap-lldb)
+  (require 'dap-cpptools)
   (custom-set-faces
    '(dap-ui-pending-breakpoint-face ((t (:background "darkred"))))
    '(dap-ui-verified-breakpoint-face ((t (:background "darkblue")))))
@@ -492,9 +494,101 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-k") 'windmove-up)
 
 (evil-define-key '(normal motion visual) 'dap-mode (kbd "<f8>") 'dap-continue)
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "<f10>") 'dap-next)
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "<f11>") 'dap-step-in)
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "M-<f10>") 'dap-next)
+(evil-define-key '(normal motion visual) 'dap-mode (kbd "M-<f11>") 'dap-step-in)
 (evil-define-key '(normal motion visual) 'dap-mode (kbd "S-<f11>") 'dap-step-out)
 (evil-define-key '(normal motion visual) 'dap-mode (kbd "C-c b") 'dap-breakpoint-toggle)
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
+
+(defun dap--instruction-pointer (debug-session cb)
+  "Get the instruction pointer for the current thread"
+  (let ((thread-id (dap--debug-session-thread-id debug-session)))
+    (if thread-id
+        (dap--send-message
+         (dap--make-request "stackTrace" (list :threadId thread-id))
+         (lambda (parsed-message)
+           (funcall cb
+                    (gethash "instructionPointerReference" (car (gethash "stackFrames" (gethash "body" parsed-message))))))
+         debug-session)
+      (lsp--error "Currently active thread is not stopped. Use `dap-switch-thread' or select stopped thread from sessions view."))))
+
+(defun dap--disassembly-request (debug-session callback &optional start-address instructions-preceeding instruction-count)
+  "Get disassembly for the given session, for the optional
+   address range (defaults to 16 instructions either side of the
+   instruction pointer)"
+  (unless (gethash "supportsDisassembleRequest" (dap--debug-session-current-capabilities debug-session))
+    (error "disassemble request is not supported by this debug adapter"))
+  (let ((make-request
+         (lambda (&optional instruction-ptr)
+           (let ((disassemble-args (list :memoryReference (or instruction-ptr start-address)
+                                         :instructionOffset (or instructions-preceeding -2)
+                                         :instructionCount (or instruction-count 32))))
+             (dap--send-message
+              (dap--make-request  "disassemble" disassemble-args)
+              (lambda (msg) (funcall callback instruction-ptr (gethash "instructions" (gethash "body" msg))))
+              debug-session)))))
+    (if start-address
+        (funcall make-request)
+      (dap--instruction-pointer debug-session make-request))))
+
+(defconst dap-ui--disassembly-buffer "*dap-ui-disassembly*")
+
+(add-to-list 'dap-ui-buffer-configurations
+             `(,dap-ui--disassembly-buffer . ((side . bottom) (slot . 2) (window-width . 0.40))))
+
+(defun dap-ui-disassembly--render (instruction-ptr instructions)
+  (let ((buffer (get-buffer-create dap-ui--disassembly-buffer))
+        (marker-point nil))
+    (with-current-buffer buffer
+      (asm-mode)
+      (setq buffer-read-only nil)
+      (font-lock-mode -1)
+      (erase-buffer)
+      (dolist (instruction instructions)
+        (let* ((address (gethash "address" instruction))
+               (line (format "%s: %s\n"
+                             address
+                             (gethash "instruction" instruction))))
+          (when (string= address instruction-ptr)
+            (setq marker-point (point)))
+          (insert line)))
+      (font-lock-fontify-buffer)
+      (when (integer-or-marker-p marker-point)
+        (goto-char marker-point)
+        (dap-ui--make-overlay (line-beginning-position) (line-end-position)
+
+                              (list :face 'dap-ui-marker-face ; todo - refacetor dap-ui--set-debug-marker
+                                    :char ">"
+                                    :bitmap 'right-triangle
+                                    :fringe 'dap-ui-compile-errline
+                                    :priority (+ dap-ui-overlay-priority 2))
+                              nil buffer))
+      (setq buffer-read-only t))))
+
+(defun dap-ui-disassembly--refresh (&rest _)
+  (let ((debug-session (dap--cur-session)))
+    (if debug-session
+        (dap--disassembly-request debug-session #'dap-ui-disassembly--render)
+      (dap-ui-disassembly--render nil))))
+
+(defun dap-ui-disassembly--cleanup-hooks ()
+  "Remove UI disassembly related hooks."
+  (remove-hook 'dap-terminated-hook #'dap-ui-disassembly--refresh)
+  (remove-hook 'dap-session-changed-hook #'dap-ui-disassembly--refresh)
+  (remove-hook 'dap-continue-hook #'dap-ui-disassembly--refresh)
+  (remove-hook 'dap-stack-frame-changed-hook 'dap-ui-disassembly--refresh))
+
+;;;###autoload
+(defun  dap-ui-disassembly ()
+  "Show disassembly pannel."
+  (interactive)
+  (save-excursion
+    (let ((buffer (get-buffer-create dap-ui--disassembly-buffer)))
+      (dap-ui--show-buffer buffer)))
+  (dap-ui-disassembly--refresh)
+  (add-hook 'dap-terminated-hook #'dap-ui-disassembly--refresh)
+  (add-hook 'dap-session-changed-hook #'dap-ui-disassembly--refresh)
+  (add-hook 'dap-continue-hook #'dap-ui-disassembly--refresh)
+  (add-hook 'dap-stack-frame-changed-hook #'dap-ui-disassembly--refresh)
+  (add-hook 'kill-buffer-hook #'dap-ui-disassembly--cleanup-hooks nil t))
