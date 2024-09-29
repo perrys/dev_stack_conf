@@ -30,33 +30,14 @@
         ("<tab>". tab-indent-or-complete)
         ("TAB". tab-indent-or-complete)))
 
-(use-package dap-mode
-  :ensure t
-  :config
-  (dap-mode t)
-  (dap-ui-mode t)
-  (require 'dap-gdb)
-  (require 'dap-lldb)
-  (require 'dap-cpptools)
-  (custom-set-faces
-   '(dap-ui-pending-breakpoint-face ((t (:background "darkred"))))
-   '(dap-ui-verified-breakpoint-face ((t (:background "darkblue")))))
-  ;(setq dap-gdb-debug-program '("rust-gdb" "-i" "dap"))
-  :custom
-  (dap-auto-configure-features '(breakpoints locals sessions expressions controls))
-  (dap-lldb-debug-program '("lldb-dap-18"))
-  (dap-ui-variable-length 1000)
- )
-
+(add-to-list 'load-path (expand-file-name "~/dev/dapdbg"))
+(require 'dapdbg-ui)
+(dapdbg-ui-setup-many-windows)
 
 (use-package diminish
   :config
-  (diminish 'yas-minor-mode "")
-  (diminish 'abbrev-mode "")
-  (diminish 'evil-goggles-mode "")
-  (diminish 'evil-escape-mode "")
-  (diminish 'evil-collection-unimpaired-mode "")
-  (eval-after-load "company" '(diminish 'company-mode)))
+  ;; most diminish config in the next section
+  (diminish 'abbrev-mode ""))
 
 (use-package evil
   :ensure t
@@ -105,7 +86,6 @@
   :ensure t
   :commands lsp
   :config
-  (add-hook 'before-save-hook 'scp/maybe-delete-trailing-whitespace)
   (add-hook 'lsp-mode-hook 'lsp-ui-mode)
   :custom
   (lsp-idle-delay 0.2)
@@ -168,11 +148,11 @@
   :if (package-installed-p 'rustic)
   :bind (:map rustic-mode-map
               ("M-?" . lsp-find-references)
-              ([f4] . lsp-ui-doc-glance)
-              ([f5] . flycheck-list-errors)
-              ([f1] . lsp-execute-code-action)
-              ([f2] . lsp-rename)
-              ([f12] . lsp-find-type-definition)
+              ([f5] . lsp-execute-code-action)
+              ([f6] . lsp-rename)
+              ([f7] . lsp-ui-doc-glance)
+              ([f8] . lsp-find-type-definition)
+              ([f9] . flycheck-list-errors)
               ("M-SPC" . lsp-inlay-hints-mode)
               ("C-c C-c q" . lsp-workspace-restart)
               ("C-c C-c Q" . lsp-workspace-shutdown)
@@ -190,7 +170,9 @@
   :custom
   (vertico-cycle nil)
   :init
-  (vertico-mode))
+  (vertico-mode)
+  ;; see https://github.com/minad/vertico?tab=readme-ov-file#completion-styles-and-tab-completion
+  (keymap-set vertico-map "TAB" #'minibuffer-complete))
 
 (use-package yaml)
 
@@ -204,6 +186,14 @@
 
 ;; ------------------- other settings ---------------------
 
+
+;; it's easiest to just run these after all package loads
+(diminish 'company-mode)
+(diminish 'evil-collection-unimpaired-mode "")
+(diminish 'evil-collection-unimpaired-mode "")
+(diminish 'evil-escape-mode "")
+(diminish 'evil-goggles-mode "")
+(diminish 'yas-minor-mode "")
 
 (load custom-file)
 
@@ -316,9 +306,19 @@ Does nothing, can be used for local keybindings."
   (when scp/local-org-roam-mode
     (message "Local keybindings for Org Roam enabled")))
 
+(defvar scp/delete-trailing-whitespace nil
+  "Controls if trailing whitespace is deleted when saving a buffer.")
+
 (defun scp/maybe-delete-trailing-whitespace ()
   (when scp/delete-trailing-whitespace
     (delete-trailing-whitespace)))
+
+(defun scp/maybe-format-buffer ()
+  (when (and scp/delete-trailing-whitespace
+             (or (eq major-mode 'emacs-lisp-mode)))
+    (let ((saved-point (point)))
+      (indent-region (point-min) (point-max))
+      (goto-char saved-point))))
 
 (defun scp/non-side-window-list ()
   (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
@@ -392,6 +392,8 @@ Does nothing, can be used for local keybindings."
 
 ;; ------------------- hooks ---------------------
 
+(add-hook 'before-save-hook 'scp/maybe-delete-trailing-whitespace)
+(add-hook 'before-save-hook 'scp/maybe-format-buffer)
 
 (add-hook 'dired-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
 ;(add-hook 'org-roam-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
@@ -423,6 +425,7 @@ Does nothing, can be used for local keybindings."
     (lambda (buf config)
       (with-current-buffer buf
         (and (not (derived-mode-p 'magit-mode))
+             (not (derived-mode-p 'backtrace-mode))
              (derived-mode-p 'special-mode))))
     (derived-mode . tabulated-list-mode))
    (display-buffer-in-side-window)
@@ -464,6 +467,8 @@ Does nothing, can be used for local keybindings."
 (global-set-key (kbd "C-x -") 'scp/window-cycle)
 
 (evil-global-set-key 'normal (kbd "<leader>p") 'scp/evil-paste-before)
+(evil-define-key '(normal motion visual) 'global (kbd "SPC") nil)
+(evil-define-key '(normal motion visual) 'global (kbd "RET") nil)
 
 (evil-define-key '(visual) 'global (kbd ".") 'scp/add-region-to-search-history)
 
@@ -493,102 +498,10 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-j") 'windmove-down)
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-k") 'windmove-up)
 
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "<f8>") 'dap-continue)
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "M-<f10>") 'dap-next)
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "M-<f11>") 'dap-step-in)
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "S-<f11>") 'dap-step-out)
-(evil-define-key '(normal motion visual) 'dap-mode (kbd "C-c b") 'dap-breakpoint-toggle)
+(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "<f8>") 'dapdbg-continue)
+(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "M-<f10>") 'dapdbg-next)
+(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "M-<f11>") 'dapdbg-step)
+(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "S-<f11>") 'dapdbg-finish)
+(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "C-c b") 'dap-breakpoint-toggle)
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
-
-(defun dap--instruction-pointer (debug-session cb)
-  "Get the instruction pointer for the current thread"
-  (let ((thread-id (dap--debug-session-thread-id debug-session)))
-    (if thread-id
-        (dap--send-message
-         (dap--make-request "stackTrace" (list :threadId thread-id))
-         (lambda (parsed-message)
-           (funcall cb
-                    (gethash "instructionPointerReference" (car (gethash "stackFrames" (gethash "body" parsed-message))))))
-         debug-session)
-      (lsp--error "Currently active thread is not stopped. Use `dap-switch-thread' or select stopped thread from sessions view."))))
-
-(defun dap--disassembly-request (debug-session callback &optional start-address instructions-preceeding instruction-count)
-  "Get disassembly for the given session, for the optional
-   address range (defaults to 16 instructions either side of the
-   instruction pointer)"
-  (unless (gethash "supportsDisassembleRequest" (dap--debug-session-current-capabilities debug-session))
-    (error "disassemble request is not supported by this debug adapter"))
-  (let ((make-request
-         (lambda (&optional instruction-ptr)
-           (let ((disassemble-args (list :memoryReference (or instruction-ptr start-address)
-                                         :instructionOffset (or instructions-preceeding -2)
-                                         :instructionCount (or instruction-count 32))))
-             (dap--send-message
-              (dap--make-request  "disassemble" disassemble-args)
-              (lambda (msg) (funcall callback instruction-ptr (gethash "instructions" (gethash "body" msg))))
-              debug-session)))))
-    (if start-address
-        (funcall make-request)
-      (dap--instruction-pointer debug-session make-request))))
-
-(defconst dap-ui--disassembly-buffer "*dap-ui-disassembly*")
-
-(add-to-list 'dap-ui-buffer-configurations
-             `(,dap-ui--disassembly-buffer . ((side . bottom) (slot . 2) (window-width . 0.40))))
-
-(defun dap-ui-disassembly--render (instruction-ptr instructions)
-  (let ((buffer (get-buffer-create dap-ui--disassembly-buffer))
-        (marker-point nil))
-    (with-current-buffer buffer
-      (asm-mode)
-      (setq buffer-read-only nil)
-      (font-lock-mode -1)
-      (erase-buffer)
-      (dolist (instruction instructions)
-        (let* ((address (gethash "address" instruction))
-               (line (format "%s: %s\n"
-                             address
-                             (gethash "instruction" instruction))))
-          (when (string= address instruction-ptr)
-            (setq marker-point (point)))
-          (insert line)))
-      (font-lock-fontify-buffer)
-      (when (integer-or-marker-p marker-point)
-        (goto-char marker-point)
-        (dap-ui--make-overlay (line-beginning-position) (line-end-position)
-
-                              (list :face 'dap-ui-marker-face ; todo - refacetor dap-ui--set-debug-marker
-                                    :char ">"
-                                    :bitmap 'right-triangle
-                                    :fringe 'dap-ui-compile-errline
-                                    :priority (+ dap-ui-overlay-priority 2))
-                              nil buffer))
-      (setq buffer-read-only t))))
-
-(defun dap-ui-disassembly--refresh (&rest _)
-  (let ((debug-session (dap--cur-session)))
-    (if debug-session
-        (dap--disassembly-request debug-session #'dap-ui-disassembly--render)
-      (dap-ui-disassembly--render nil))))
-
-(defun dap-ui-disassembly--cleanup-hooks ()
-  "Remove UI disassembly related hooks."
-  (remove-hook 'dap-terminated-hook #'dap-ui-disassembly--refresh)
-  (remove-hook 'dap-session-changed-hook #'dap-ui-disassembly--refresh)
-  (remove-hook 'dap-continue-hook #'dap-ui-disassembly--refresh)
-  (remove-hook 'dap-stack-frame-changed-hook 'dap-ui-disassembly--refresh))
-
-;;;###autoload
-(defun  dap-ui-disassembly ()
-  "Show disassembly pannel."
-  (interactive)
-  (save-excursion
-    (let ((buffer (get-buffer-create dap-ui--disassembly-buffer)))
-      (dap-ui--show-buffer buffer)))
-  (dap-ui-disassembly--refresh)
-  (add-hook 'dap-terminated-hook #'dap-ui-disassembly--refresh)
-  (add-hook 'dap-session-changed-hook #'dap-ui-disassembly--refresh)
-  (add-hook 'dap-continue-hook #'dap-ui-disassembly--refresh)
-  (add-hook 'dap-stack-frame-changed-hook #'dap-ui-disassembly--refresh)
-  (add-hook 'kill-buffer-hook #'dap-ui-disassembly--cleanup-hooks nil t))
