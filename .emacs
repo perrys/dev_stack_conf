@@ -32,7 +32,6 @@
 
 (add-to-list 'load-path (expand-file-name "~/dev/dapdbg"))
 (require 'dapdbg-ui)
-(dapdbg-ui-setup-many-windows)
 
 (use-package diminish
   :config
@@ -196,9 +195,6 @@
 (diminish 'yas-minor-mode "")
 
 (load custom-file)
-
-(evil-set-leader nil (kbd "C-SPC"))
-(evil-set-leader '(normal visual motion) (kbd "SPC"))
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
@@ -442,6 +438,8 @@ Does nothing, can be used for local keybindings."
    (slot . 0)
    (window-height . 0.25)))
 
+(dapdbg-ui-setup-many-windows)
+
 
 ;; ------------------- keybindings ---------------------
 
@@ -466,9 +464,12 @@ Does nothing, can be used for local keybindings."
 (global-set-key (kbd "C-x +") 'scp/window-split-toggle)
 (global-set-key (kbd "C-x -") 'scp/window-cycle)
 
-(evil-global-set-key 'normal (kbd "<leader>p") 'scp/evil-paste-before)
 (evil-define-key '(normal motion visual) 'global (kbd "SPC") nil)
 (evil-define-key '(normal motion visual) 'global (kbd "RET") nil)
+
+(evil-set-leader nil (kbd "C-SPC"))
+(evil-set-leader '(normal visual motion) (kbd "SPC"))
+(evil-global-set-key 'normal (kbd "<leader>p") 'scp/evil-paste-before)
 
 (evil-define-key '(visual) 'global (kbd ".") 'scp/add-region-to-search-history)
 

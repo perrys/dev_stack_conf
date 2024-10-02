@@ -33,7 +33,8 @@
                       (setq-local display-line-numbers nil)))))
             other-windows)
       (with-current-buffer selected-buffer
-        (setq-local display-line-numbers 'relative)))))
+        (unless (derived-mode-p 'special-mode)
+          (setq-local display-line-numbers 'relative))))))
 
 (add-to-list 'scp/selected-window-changed-hook
              'scp/display-line-numbers-selected)
