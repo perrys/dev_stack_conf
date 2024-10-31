@@ -30,8 +30,7 @@
         ("<tab>". tab-indent-or-complete)
         ("TAB". tab-indent-or-complete)))
 
-(add-to-list 'load-path (expand-file-name "~/dev/dapdbg"))
-(require 'dapdbg-ui)
+(use-package bazel)
 
 (use-package diminish
   :config
@@ -187,8 +186,8 @@
 
 
 ;; it's easiest to just run these after all package loads
+(diminish 'abbrev-mode)
 (diminish 'company-mode)
-(diminish 'evil-collection-unimpaired-mode "")
 (diminish 'evil-collection-unimpaired-mode "")
 (diminish 'evil-escape-mode "")
 (diminish 'evil-goggles-mode "")
@@ -302,19 +301,28 @@ Does nothing, can be used for local keybindings."
   (when scp/local-org-roam-mode
     (message "Local keybindings for Org Roam enabled")))
 
-(defvar scp/delete-trailing-whitespace nil
-  "Controls if trailing whitespace is deleted when saving a buffer.")
-
-(defun scp/maybe-delete-trailing-whitespace ()
-  (when scp/delete-trailing-whitespace
-    (delete-trailing-whitespace)))
+(defvar scp/format-on-save nil
+  "Controls if formatting is applied when saving a buffer.")
 
 (defun scp/maybe-format-buffer ()
-  (when (and scp/delete-trailing-whitespace
-             (or (eq major-mode 'emacs-lisp-mode)))
-    (let ((saved-point (point)))
-      (indent-region (point-min) (point-max))
-      (goto-char saved-point))))
+  (when scp/format-on-save
+    (delete-trailing-whitespace)
+    (cond
+     ((derived-mode-p 'emacs-lisp-mode)
+      (let ((saved-point (point)))
+        (indent-region (point-min) (point-max))
+        (goto-char saved-point)))
+     ((or (derived-mode-p 'c-mode)
+          (derived-mode-p 'c++-mode))
+      (let ((saved-point (point))
+            (cmd "clang-format")
+            (args `("--style=file" ,(concat "--assume-filename=" (file-name-nondirectory (buffer-file-name))))))
+        (message (apply #'concat cmd " " args))
+        (save-restriction
+          (widen)
+          (apply #'call-process-region (point-min) (point-max) cmd t t nil args))
+        (goto-char saved-point))))
+    t))
 
 (defun scp/non-side-window-list ()
   (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
@@ -388,11 +396,11 @@ Does nothing, can be used for local keybindings."
 
 ;; ------------------- hooks ---------------------
 
-(add-hook 'before-save-hook 'scp/maybe-delete-trailing-whitespace)
+(add-hook 'c++-mode-hook 'lsp)
 (add-hook 'before-save-hook 'scp/maybe-format-buffer)
 
 (add-hook 'dired-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
-;(add-hook 'org-roam-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
+;;(add-hook 'org-roam-mode-hook (lambda () (evil-define-key 'normal 'local (kbd "SPC") 'scp/evil-send-leader)))
 
 ;; make _ part of a word:
 (add-hook 'prog-mode-hook
@@ -438,7 +446,6 @@ Does nothing, can be used for local keybindings."
    (slot . 0)
    (window-height . 0.25)))
 
-(dapdbg-ui-setup-many-windows)
 
 
 ;; ------------------- keybindings ---------------------
@@ -488,6 +495,8 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>R") 'lsp-find-definition)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>r") 'lsp-find-references)
 
+(evil-define-key '(normal motion visual) 'c++-mode-map (kbd "<leader>o") 'projectile-find-other-window)
+
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>f") 'org-roam-node-find)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>i") 'org-roam-node-insert)
@@ -506,3 +515,7 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "C-c b") 'dap-breakpoint-toggle)
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
+
+(add-to-list 'load-path (expand-file-name "~/dev/dapdbg"))
+(require 'dapdbg-ui)
+(dapdbg-ui-setup-many-windows)

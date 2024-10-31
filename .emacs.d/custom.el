@@ -23,7 +23,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(align-to-tab-stop nil)
- '(asm-comment-char ?#)
+ '(asm-comment-char 35)
  '(c-basic-offset 4)
  '(column-number-mode t)
  '(css-indent-offset 4)
@@ -59,7 +59,7 @@
      (file . find-file)
      (wl . wl-other-frame)))
  '(package-selected-packages
-   '(protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(bazel protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values
    '((scp/delete-trailing-whitespace . t)
      (index-tabs-mode)
