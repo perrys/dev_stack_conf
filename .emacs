@@ -15,6 +15,8 @@
   (package-refresh-contents)
   (package-install 'use-package))
 
+(use-package bazel)
+
 (use-package company
   :ensure t
   :custom
@@ -29,8 +31,6 @@
   (:map company-mode-map
         ("<tab>". tab-indent-or-complete)
         ("TAB". tab-indent-or-complete)))
-
-(use-package bazel)
 
 (use-package diminish
   :config
@@ -82,6 +82,11 @@
 
 (use-package lsp-mode
   :ensure t
+  :bind (:map lsp-mode-map
+              ("M-?" . lsp-find-references)
+              ([f5] . lsp-execute-code-action)
+              ([f6] . lsp-rename)
+              ([f7] . lsp-find-type-definition))
   :commands lsp
   :config
   (add-hook 'lsp-mode-hook 'lsp-ui-mode)
@@ -186,8 +191,7 @@
 
 
 ;; it's easiest to just run these after all package loads
-(diminish 'abbrev-mode)
-(diminish 'company-mode)
+(diminish 'company-mode "")
 (diminish 'evil-collection-unimpaired-mode "")
 (diminish 'evil-escape-mode "")
 (diminish 'evil-goggles-mode "")
@@ -434,7 +438,7 @@ Does nothing, can be used for local keybindings."
     (derived-mode . tabulated-list-mode))
    (display-buffer-in-side-window)
    (side . left)
-   (slot . 0)
+   (slot . 1)
    (window-width . 84)))
 
 (add-to-list
@@ -495,7 +499,7 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>R") 'lsp-find-definition)
 (evil-define-key '(normal motion visual) 'prog-mode-map (kbd "<leader>r") 'lsp-find-references)
 
-(evil-define-key '(normal motion visual) 'c++-mode-map (kbd "<leader>o") 'projectile-find-other-window)
+(evil-define-key '(normal motion visual) 'c++-mode-map (kbd "<leader>o") 'projectile-find-other-file-other-window)
 
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>l") 'org-roam-buffer-toggle)
 (evil-define-key '(normal motion visual) 'org-roam-mode-map (kbd "<leader>f") 'org-roam-node-find)
@@ -516,6 +520,4 @@ Does nothing, can be used for local keybindings."
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
 
-(add-to-list 'load-path (expand-file-name "~/dev/dapdbg"))
-(require 'dapdbg-ui)
-(dapdbg-ui-setup-many-windows)
+(load-file (file-name-concat user-emacs-directory "gdb-cfg.el"))

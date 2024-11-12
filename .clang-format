@@ -2,6 +2,7 @@
 AllowShortFunctionsOnASingleLine: false
 BasedOnStyle: LLVM
 ColumnLimit: 100
+DerivePointerAlignment: false
 IncludeBlocks: Regroup
 IncludeCategories:
   # Headers in <> without extension.
@@ -19,6 +20,7 @@ IncludeCategories:
 IndentWidth: 4
 #InsertBraces: true
 NamespaceIndentation: None
+PointerAlignment: Left
 ReflowComments: false
 SortIncludes: true
 Standard: c++20

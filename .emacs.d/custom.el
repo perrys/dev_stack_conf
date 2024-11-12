@@ -48,7 +48,7 @@
  '(ediff-split-window-function 'split-window-horizontally)
  '(evil-search-module 'evil-search)
  '(fill-column 80)
- '(gdb-many-windows t)
+ '(gdb-many-windows nil)
  '(indent-tabs-mode nil)
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
@@ -61,7 +61,8 @@
  '(package-selected-packages
    '(bazel protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values
-   '((scp/delete-trailing-whitespace . t)
+   '((scp/format-on-save . t)
+     (scp/delete-trailing-whitespace . t)
      (index-tabs-mode)
      (c-indentation-style . elemetel)))
  '(select-enable-primary t)
@@ -74,7 +75,6 @@
  '(truncate-partial-width-windows 85)
  '(visible-bell t)
  '(warning-suppress-types '((comp))))
-;;'(gdb-default-window-configuration-file "gdb-window-cfg.el")
 ;;'(completion-styles '(basic partial-completion emacs22 flex))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.

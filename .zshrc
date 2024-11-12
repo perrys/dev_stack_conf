@@ -8,6 +8,8 @@ bindkey -v
 # The following lines were added by compinstall
 zstyle :compinstall filename '/home/stu/.zshrc'
 
+ulimit -c unlimited
+
 autoload -Uz compinit
 compinit
 # End of lines added by compinstall
