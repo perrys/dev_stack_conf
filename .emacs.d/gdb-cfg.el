@@ -55,14 +55,18 @@ architectures."
 
 (defun gdb-parse-address (strval)
   "Parse the given string into a number, accounting for hex numbers with leading `0x'."
-  (let  ((s-val (if (string= (downcase (substring strval 0 2)) "0x")
-                    (substring strval 2)
-                  strval)))
-    (string-to-number s-val 16)))
+  (when strval
+    (let  ((s-val (if (string= (downcase (substring strval 0 2)) "0x")
+                      (substring strval 2)
+                    strval)))
+      (string-to-number s-val 16))))
+
+(defun scp/safe-propertize (s &rest props)
+  (if s (apply #'propertize s props) ""))
 
 (defun scp/gdb-render-disassembly-line (instr)
   (let ((addr (gdb-parse-address (gdb-mi--field instr 'address)))
-        (func-name (propertize (gdb-mi--field instr 'func-name) 'face 'font-lock-function-name-face))
+        (func-name (scp/safe-propertize (gdb-mi--field instr 'func-name) 'face 'font-lock-function-name-face))
         (offset (format "+%s" (gdb-mi--field instr 'offset)))
         (instr (gdb-mi--field instr 'inst)))
     (list addr (vector (format gdb-address-format addr) func-name offset instr))))

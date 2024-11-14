@@ -186,6 +186,8 @@
   (add-hook 'prog-mode-hook 'yas-minor-mode)
   (add-hook 'text-mode-hook 'yas-minor-mode))
 
+(load-file (file-name-concat user-emacs-directory "gdb-cfg.el"))
+
 
 ;; ------------------- other settings ---------------------
 
@@ -439,7 +441,8 @@ Does nothing, can be used for local keybindings."
    (display-buffer-in-side-window)
    (side . left)
    (slot . 1)
-   (window-width . 84)))
+   (window-width . 84))
+ t)
 
 (add-to-list
  'display-buffer-alist
@@ -449,7 +452,6 @@ Does nothing, can be used for local keybindings."
    (side . bottom)
    (slot . 0)
    (window-height . 0.25)))
-
 
 
 ;; ------------------- keybindings ---------------------
@@ -519,5 +521,3 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "C-c b") 'dap-breakpoint-toggle)
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
-
-(load-file (file-name-concat user-emacs-directory "gdb-cfg.el"))

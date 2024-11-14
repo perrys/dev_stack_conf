@@ -3,6 +3,8 @@
 ;;
 ;; (byte-compile-file (buffer-file-name))
 
+(require 'face-remap)
+
 (defvar scp/frame-size-changed-hook nil
   "Hooks to run when the frame size changes")
 
@@ -18,26 +20,43 @@
   (mapc (lambda (hookfn) (funcall hookfn frame))
         scp/selected-window-changed-hook))
 
-(defun scp/display-line-numbers-selected (frame)
+(defvar scp/dim-bg nil
+  "Buffer-local holder for background face remapping")
+(make-variable-buffer-local 'scp/dim-bg)
+
+(defun scp/update-unfocused-window (minibufp window)
+  (let ((buffer (window-buffer window)))
+    (with-current-buffer buffer
+      (when (not minibufp)
+        (if (buffer-local-value 'display-line-numbers buffer)
+            (setq-local display-line-numbers nil)))
+      (unless scp/dim-bg
+        (message "unfocussing %s, %s" window scp/dim-bg)
+        (setq-local scp/dim-bg (face-remap-add-relative 'default :background "#131313"))))))
+
+(defun scp/update-focused-window (selected-window)
+  (with-current-buffer (window-buffer selected-window)
+    (unless (or (minibufferp) (derived-mode-p 'special-mode)
+                (setq-local display-line-numbers 'relative)))
+    (when scp/dim-bg
+      (message "focussing %s, %s" selected-window scp/dim-bg)
+      (face-remap-remove-relative scp/dim-bg)
+      (setq-local scp/dim-bg nil))))
+
+(defun scp/highlight-focused-window (frame)
   "Display line numbers for the selected window only"
   (let* ((selected-window (frame-selected-window frame))
          (other-windows (seq-remove (lambda (w)
                                       (eq w selected-window))
                                     (window-list frame)))
-         (selected-buffer (window-buffer selected-window)))
-    (when (not (minibufferp selected-buffer))
-      (mapc (lambda (window)
-              (let ((buffer (window-buffer window)))
-                (if (buffer-local-value 'display-line-numbers buffer)
-                    (with-current-buffer buffer
-                      (setq-local display-line-numbers nil)))))
-            other-windows)
-      (with-current-buffer selected-buffer
-        (unless (derived-mode-p 'special-mode)
-          (setq-local display-line-numbers 'relative))))))
+         (selected-buffer (window-buffer selected-window))
+         (minibufp (minibufferp selected-buffer))
+         (updater (apply-partially #'scp/update-unfocused-window minibufp)))
+    (mapc updater other-windows)
+    (scp/update-focused-window selected-window)))
 
 (add-to-list 'scp/selected-window-changed-hook
-             'scp/display-line-numbers-selected)
+             'scp/highlight-focused-window)
 
 (defconst scp/default-ui (cons (cons (face-background 'mode-line)
                                      (face-foreground 'mode-line))
