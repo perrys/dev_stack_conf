@@ -157,16 +157,32 @@ architectures."
 (defun scp/gdb-invalidate-registers (signal)
   (cond
    ((eq signal 'update-registers)
-    (let ((cmd (concat (gdb-current-context-command "-data-list-register-values")
-                       " N "
-                       (string-join gdb-changed-registers " "))))
-      (gdb-input cmd
+    ;; remove changed indicator:
+    (seq-do (lambda (row)
+              (when row
+                (let ((value (gdb-reg-value row))
+                      (raw (gdb-reg-raw row)))
+                  (set-text-properties 0 (length raw) nil raw)
+                  (set-text-properties 0 (length value) nil value))))
+            gdb-registers-rows)
+    (let* ((registers (string-join gdb-changed-registers " "))
+           (raw-cmd (concat (gdb-current-context-command "-data-list-register-values") " r " registers))
+           (val-cmd (concat (gdb-current-context-command "-data-list-register-values") " N " registers)))
+      (gdb-input raw-cmd
+                 (gdb-bind-function-to-buffer 'scp/gdb-registers-handler-raw (current-buffer)))
+      (gdb-input val-cmd
                  (gdb-bind-function-to-buffer 'scp/gdb-registers-handler (current-buffer))
                  (cons (current-buffer) 'scp/gdb-invalidate-registers))))
    ((eq signal 'start)
-    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " x")
+    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " r")
+               (gdb-bind-function-to-buffer 'scp/gdb-registers-handler-raw (current-buffer)))
+    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " N")
                (gdb-bind-function-to-buffer 'scp/gdb-registers-handler (current-buffer))
                (cons (current-buffer) 'scp/gdb-invalidate-registers)))))
+
+(def-gdb-auto-update-handler
+  scp/gdb-registers-handler-raw
+  scp/gdb-registers-handler-custom-raw)
 
 (def-gdb-auto-update-handler
   scp/gdb-registers-handler
@@ -183,39 +199,45 @@ architectures."
   (setq tabulated-list-format
         (vector '("Name" 16 nil :right-align nil)
                 '("Fmt" 3 nil :right-align t)
+                '("Raw" 18 nil :right-align t)
                 '("Value" 999 nil)))
   (tabulated-list-init-header)
   (setq-local gdb-registers-rows nil)
   'scp/gdb-invalidate-registers)
 
-(defun scp/gdb-registers-handler-custom ()
+(cl-defstruct (gdb-reg (:type vector))
+  "Structure for register data and metadata"
+  (name nil :read-only t)
+  (fmt nil)
+  (raw nil)
+  (value nil)
+  (other-shit nil))
+
+(defun scp/gdb-registers-handler-custom-raw ()
+  (scp/gdb-registers-handler-custom t))
+
+(defun scp/gdb-registers-handler-custom (&optional raw-flag)
   (when gdb-register-names
     (unless gdb-registers-rows
       (setq-local gdb-registers-rows (make-vector (length gdb-register-names) nil))
       (seq-do-indexed (lambda (register-name idx)
                         (aset gdb-registers-rows idx
-                              (vector
-                               (propertize register-name
-                                           'font-lock-face font-lock-variable-name-face)
-                               ""
-                               "<unknown>")))
+                              (make-gdb-reg
+                               :name (propertize register-name 'font-lock-face font-lock-variable-name-face)
+                               :fmt ""
+                               :raw ""
+                               :value "")))
                       gdb-register-names))
-    ;; remove changed indicator:
-    (seq-do (lambda (row)
-              (when row
-                (let ((value (aref row 2)))
-                  (set-text-properties 0 (length value) nil value))))
-            gdb-registers-rows)
     (let ((register-values (gdb-mi--field (gdb-mi--partial-output) 'register-values)))
       (dolist (register register-values)
         (let* ((register-number (gdb-mi--field register 'number))
                (register-idx (string-to-number register-number))
-               (value (gdb-mi--field register 'value))
+               (val (gdb-mi--field register 'value))
                (row (aref gdb-registers-rows register-idx)))
-          (aset row 2
+          (setf (if raw-flag (gdb-reg-raw row) (gdb-reg-value row))
                 (if (member register-number gdb-changed-registers)
-                    (propertize value 'font-lock-face font-lock-warning-face)
-                  value)))))
+                    (propertize val 'font-lock-face font-lock-warning-face)
+                  val)))))
     (setq tabulated-list-entries (seq-map-indexed  (lambda (row idx)
                                                      (list idx row))
                                                    gdb-registers-rows))
