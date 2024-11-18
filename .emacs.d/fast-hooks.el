@@ -31,7 +31,6 @@
         (if (buffer-local-value 'display-line-numbers buffer)
             (setq-local display-line-numbers nil)))
       (unless scp/dim-bg
-        (message "unfocussing %s, %s" window scp/dim-bg)
         (setq-local scp/dim-bg (face-remap-add-relative 'default :background "#131313"))))))
 
 (defun scp/update-focused-window (selected-window)
@@ -39,7 +38,6 @@
     (unless (or (minibufferp) (derived-mode-p 'special-mode)
                 (setq-local display-line-numbers 'relative)))
     (when scp/dim-bg
-      (message "focussing %s, %s" selected-window scp/dim-bg)
       (face-remap-remove-relative scp/dim-bg)
       (setq-local scp/dim-bg nil))))
 

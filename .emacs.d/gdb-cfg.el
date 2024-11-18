@@ -7,9 +7,36 @@ The default is 12 hex characters (zero-padded), which is enough
 to display 48-bit addresses. You may need to widen this for some
 architectures."
   :group 'gdb
-  :type 'natnum)
+  :type 'string)
 
 (define-derived-mode gdb-tabulated-list-mode tabulated-list-mode "GDB Tabulated")
+
+(defvar-keymap gdb-ui-mode-map
+  :doc "Keymap for basic debugger controls."
+  "<f1>" #'gud-break
+  "C-<f1>" #'gud-remove
+  "<f2>" #'gud-next
+  "C-<f2>" #'gud-nexti
+  "<f3>" #'gud-step
+  "C-<f3>" #'gud-stepi
+  "S-<f3>" #'gud-finish
+  "<f4>" #'gud-cont
+  "C-<f4>" #'gdb-pause
+  )
+
+(define-minor-mode gdb-ui-mode
+  "UI for GDB. This minor mode includes a keymap for basic debugger control.")
+
+(defun gdb-ui-mode-enable (buf)
+  (with-current-buffer buf
+    (gdb-ui-mode 1)))
+
+(advice-add #'gdb-display-source-buffer :after #'gdb-ui-mode-enable)
+
+
+
+;;------------------------------ Disassembly ----------------------------------------
+
 
 (define-derived-mode gdb-disassembly-mode gdb-tabulated-list-mode "Disassembly"
   "Major mode for GDB disassembly information."
@@ -117,6 +144,103 @@ architectures."
           (goto-char bol)
           (gdb-put-breakpoint-icon (string-equal flag "y") bptno))))))
 
+
+
+;;------------------------------ Registers ----------------------------------------
+
+
+(defun scp/gdb-changed-registers-handler ()
+  (gdb-emit-signal gdb-buf-publisher 'update-registers))
+
+(advice-add #'gdb-changed-registers-handler :after #'scp/gdb-changed-registers-handler)
+
+(defun scp/gdb-invalidate-registers (signal)
+  (cond
+   ((eq signal 'update-registers)
+    (let ((cmd (concat (gdb-current-context-command "-data-list-register-values")
+                       " N "
+                       (string-join gdb-changed-registers " "))))
+      (gdb-input cmd
+                 (gdb-bind-function-to-buffer 'scp/gdb-registers-handler (current-buffer))
+                 (cons (current-buffer) 'scp/gdb-invalidate-registers))))
+   ((eq signal 'start)
+    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " x")
+               (gdb-bind-function-to-buffer 'scp/gdb-registers-handler (current-buffer))
+               (cons (current-buffer) 'scp/gdb-invalidate-registers)))))
+
+(def-gdb-auto-update-handler
+  scp/gdb-registers-handler
+  scp/gdb-registers-handler-custom)
+
+(gdb-set-buffer-rules
+ 'gdb-registers-buffer
+ 'gdb-registers-buffer-name
+ 'gdb-registers-mode
+ 'scp/gdb-invalidate-registers) ;; last one is "trigger" which is called from registers buffer by event subscriber mech
+
+(define-derived-mode gdb-registers-mode gdb-tabulated-list-mode "Registers"
+  "Major mode for gdb registers."
+  (setq tabulated-list-format
+        (vector '("Name" 16 nil :right-align nil)
+                '("Fmt" 3 nil :right-align t)
+                '("Value" 999 nil)))
+  (tabulated-list-init-header)
+  (setq-local gdb-registers-rows nil)
+  'scp/gdb-invalidate-registers)
+
+(defun scp/gdb-registers-handler-custom ()
+  (when gdb-register-names
+    (unless gdb-registers-rows
+      (setq-local gdb-registers-rows (make-vector (length gdb-register-names) nil))
+      (seq-do-indexed (lambda (register-name idx)
+                        (aset gdb-registers-rows idx
+                              (vector
+                               (propertize register-name
+                                           'font-lock-face font-lock-variable-name-face)
+                               ""
+                               "<unknown>")))
+                      gdb-register-names))
+    ;; remove changed indicator:
+    (seq-do (lambda (row)
+              (when row
+                (let ((value (aref row 2)))
+                  (set-text-properties 0 (length value) nil value))))
+            gdb-registers-rows)
+    (let ((register-values (gdb-mi--field (gdb-mi--partial-output) 'register-values)))
+      (dolist (register register-values)
+        (let* ((register-number (gdb-mi--field register 'number))
+               (register-idx (string-to-number register-number))
+               (value (gdb-mi--field register 'value))
+               (row (aref gdb-registers-rows register-idx)))
+          (aset row 2
+                (if (member register-number gdb-changed-registers)
+                    (propertize value 'font-lock-face font-lock-warning-face)
+                  value)))))
+    (setq tabulated-list-entries (seq-map-indexed  (lambda (row idx)
+                                                     (list idx row))
+                                                   gdb-registers-rows))
+
+    ;; (when gdb-registers-enable-filter
+    ;;   (cl-loop for pattern
+    ;;            in gdb-registers-filter-pattern-list
+    ;;            if (string-match pattern register-name)
+    ;;            return t
+    ;;            finally return nil)))
+    )
+  (tabulated-list-print)
+  (setq mode-name
+        (gdb-current-context-mode-name "Registers")))
+
+(defun scp/gdb-registers-handler-custom1 ()
+  (error "should not be called"))
+
+(advice-add #'gdb-registers-handler-custom :override #'scp/gdb-registers-handler-custom1)
+
+
+
+;;------------------------------ Other stuff ----------------------------------------
+
+
 (defun gdb-cfg-setup-many-windows ()
   (interactive)
   (add-to-list
@@ -151,10 +275,10 @@ architectures."
      (slot . 3)))
   (add-to-list
    'display-buffer-alist
-   `("\\*locals of*"
+   '((derived-mode . gdb-registers-mode)
      (display-buffer-in-side-window)
      (side . right)
-     (slot . 1)))
+     (slot . 2)))
   )
 (gdb-cfg-setup-many-windows)
 
@@ -162,7 +286,7 @@ architectures."
   (interactive)
   (gdb-display-breakpoints-buffer)
   (gdb-display-disassembly-buffer)
-  (gdb-display-locals-buffer)
+  (gdb-display-registers-buffer)
   (gdb-display-stack-buffer))
 
 
