@@ -348,10 +348,43 @@ values and formatted values grouped by format."
 
 (advice-add #'gdb-registers-handler-custom :override #'scp/gdb-registers-handler-custom1)
 
+(defun scp/group-registers (rows)
+  (let ((alist nil)
+        (tmp nil))
+    (dolist (row rows)
+      (let* ((fmt (gdb-reg-fmt row))
+             (existing (cdr (assoc fmt alist))))
+        (setf (alist-get fmt alist nil nil 'equal)
+              (cons row existing))))
+    alist))
+
+
+(ert-deftest can-group-registers ()
+  (let* ((registers `(,(make-gdb-reg :name "nat1" :fmt "N")
+                      ,(make-gdb-reg :name "nat2" :fmt "N")
+                      ,(make-gdb-reg :name "int1" :fmt "d")
+                      ,(make-gdb-reg :name "int2" :fmt "d")
+                      ,(make-gdb-reg :name "nat3" :fmt "N")))
+         (groups (scp/group-registers registers))
+         (nats (cdr (assoc "N" groups)))
+         (ints (cdr (assoc "d" groups))))
+    (should (equal '("nat3" "nat2" "nat1") (mapcar #'gdb-reg-name nats)))
+    (should (equal '("int2" "int1") (mapcar #'gdb-reg-name ints)))))
+
 
 
 ;;------------------------------ Other stuff ----------------------------------------
 
+(defun gdb-mi-eval (cmd)
+  "Evaluate the GDB command CMD and display results in the *scratch* buffer"
+  (interactive "smi cmd: ")
+  (gdb-input cmd
+             (lambda ()
+               (let ((response  (gdb-mi--partial-output)))
+                 (with-current-buffer "*scratch*"
+                   (save-excursion
+                     (goto-char (point-max))
+                     (insert (format "\n%s" response))))))))
 
 (defun gdb-cfg-setup-many-windows ()
   (interactive)
