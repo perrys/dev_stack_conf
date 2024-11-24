@@ -76,7 +76,8 @@
  '(tramp-default-method "ssh")
  '(truncate-partial-width-windows 85)
  '(visible-bell t)
- '(warning-suppress-types '((comp))))
+ '(warning-suppress-types '((comp)))
+ '(xterm-mouse-mode t))
 ;;'(completion-styles '(basic partial-completion emacs22 flex))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.

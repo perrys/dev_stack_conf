@@ -154,45 +154,58 @@ architectures."
 
 (advice-add #'gdb-changed-registers-handler :after #'scp/gdb-changed-registers-handler)
 
-(defun scp/gdb-invalidate-registers (signal)
-  (cond
-   ((eq signal 'update-registers)
-    ;; remove changed indicator:
-    (seq-do (lambda (row)
-              (when row
-                (let ((value (gdb-reg-value row))
-                      (raw (gdb-reg-raw row)))
-                  (set-text-properties 0 (length raw) nil raw)
-                  (set-text-properties 0 (length value) nil value))))
-            gdb-registers-rows)
-    (let* ((registers (string-join gdb-changed-registers " "))
-           (raw-cmd (concat (gdb-current-context-command "-data-list-register-values") " r " registers))
-           (val-cmd (concat (gdb-current-context-command "-data-list-register-values") " N " registers)))
-      (gdb-input raw-cmd
-                 (gdb-bind-function-to-buffer 'scp/gdb-registers-handler-raw (current-buffer)))
-      (gdb-input val-cmd
-                 (gdb-bind-function-to-buffer 'scp/gdb-registers-handler (current-buffer))
-                 (cons (current-buffer) 'scp/gdb-invalidate-registers))))
-   ((eq signal 'start)
-    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " r")
-               (gdb-bind-function-to-buffer 'scp/gdb-registers-handler-raw (current-buffer)))
-    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " N")
-               (gdb-bind-function-to-buffer 'scp/gdb-registers-handler (current-buffer))
-               (cons (current-buffer) 'scp/gdb-invalidate-registers)))))
-
 (def-gdb-auto-update-handler
   scp/gdb-registers-handler-raw
-  scp/gdb-registers-handler-custom-raw)
-
-(def-gdb-auto-update-handler
-  scp/gdb-registers-handler
   scp/gdb-registers-handler-custom)
+
+(defvar scp/gdb-registers-handler-plist nil
+  "Map of register formats (x, d, N etc) to specialized handler function for that format")
+
+(defmacro def-scp/gdb-reg-handler (fmt-key)
+  (declare (indent defun))
+  (let* ((fmt-name (substring (symbol-name fmt-key) 1))
+         (handler-name (format "scp/gdb-registers-handler-%s" fmt-name))
+         (custom-handler-name (format "scp/gdb-registers-handler-custom-%s" fmt-name)))
+    `(progn
+       (defun ,(intern custom-handler-name) ()
+         (scp/gdb-registers-handler-custom ,fmt-name))
+       (def-gdb-auto-update-handler
+         ,(intern handler-name)
+         ,(intern custom-handler-name))
+       (setq scp/gdb-registers-handler-plist
+             (plist-put scp/gdb-registers-handler-plist ,fmt-key #',(intern handler-name))))))
+
+(def-scp/gdb-reg-handler :N)
+(def-scp/gdb-reg-handler :d)
+(def-scp/gdb-reg-handler :x)
+(def-scp/gdb-reg-handler :t)
+(def-scp/gdb-reg-handler :o)
 
 (gdb-set-buffer-rules
  'gdb-registers-buffer
  'gdb-registers-buffer-name
  'gdb-registers-mode
  'scp/gdb-invalidate-registers) ;; last one is "trigger" which is called from registers buffer by event subscriber mech
+
+(defmacro def-scp/gdb-change-format (fmt)
+  `(defun ,(intern (format "scp/gdb-change-format-%s" fmt)) ()
+     (interactive)
+     (scp/gdb-change-format ,fmt)))
+(def-scp/gdb-change-format "x")
+(def-scp/gdb-change-format "d")
+(def-scp/gdb-change-format "N")
+
+(setq gdb-registers-mode-map
+      (let ((map (make-sparse-keymap)))
+        (suppress-keymap map)
+        (define-key map "\r" 'gdb-edit-register-value)
+        (define-key map [mouse-2] 'gdb-edit-register-value)
+        (define-key map "q" 'kill-current-buffer)
+        (define-key map "f" #'gdb-registers-toggle-filter)
+        (define-key map "x" #'scp/gdb-change-format-x)
+        (define-key map "d" #'scp/gdb-change-format-d)
+        (define-key map "n" #'scp/gdb-change-format-N)
+        map))
 
 (define-derived-mode gdb-registers-mode gdb-tabulated-list-mode "Registers"
   "Major mode for gdb registers."
@@ -202,7 +215,7 @@ architectures."
                 '("Raw" 18 nil :right-align t)
                 '("Value" 999 nil)))
   (tabulated-list-init-header)
-  (setq-local gdb-registers-rows nil)
+  (setq-local gdb-registers-vector nil)
   'scp/gdb-invalidate-registers)
 
 (cl-defstruct (gdb-reg (:type vector))
@@ -213,34 +226,111 @@ architectures."
   (value nil)
   (other-shit nil))
 
-(defun scp/gdb-registers-handler-custom-raw ()
-  (scp/gdb-registers-handler-custom t))
+(defun gdb-edit-register-value (&optional event)
+  "Assign a value to a register displayed in the registers buffer."
+  (interactive (list last-input-event))
+  (save-excursion
+    (if event (posn-set-point (event-end event)))
+    (beginning-of-line)
+    (let* ((var (get-text-property (point) 'gdb-register-name))
+	   (value (read-string (format "New value (%s): " var))))
+      (gud-basic-call
+       (concat  "-gdb-set variable $" var " = " value)))))
 
-(defun scp/gdb-registers-handler-custom (&optional raw-flag)
+(defun scp/gdb-initialize-registers-vector ()
+  "Ensure that the buffer-local variable gdb-registers-vector is
+initialized"
   (when gdb-register-names
-    (unless gdb-registers-rows
-      (setq-local gdb-registers-rows (make-vector (length gdb-register-names) nil))
+    (unless gdb-registers-vector
+      (setq-local gdb-registers-vector (make-vector (length gdb-register-names) nil))
       (seq-do-indexed (lambda (register-name idx)
-                        (aset gdb-registers-rows idx
+                        (aset gdb-registers-vector idx
                               (make-gdb-reg
                                :name (propertize register-name 'font-lock-face font-lock-variable-name-face)
-                               :fmt ""
+                               :fmt "N"
                                :raw ""
                                :value "")))
-                      gdb-register-names))
+                      gdb-register-names))))
+
+(defun scp/gdb-change-format (fmt &optional idx)
+  (unless idx
+    (setq idx (tabulated-list-get-id)))
+  (setf (gdb-reg-fmt (aref gdb-registers-vector idx)) fmt)
+  (scp/update-registers (list idx)))
+
+(defun scp/gdb-collect-registers (&optional indices)
+  "Return a plist mapping GDB format to the list of register indices
+in gdb-registers-vector with that format, optionally filtered to
+the ones in INDICES."
+  (let ((result nil))
+    (seq-do-indexed (lambda (row idx)
+                      (when (or (not indices)
+                                (memq idx indices))
+                        (let* ((fmt (gdb-reg-fmt row))
+                               (fmt-key (intern (format ":%s" fmt)))
+                               (group (plist-get result fmt-key)))
+                          (push idx group)
+                          (setq result (plist-put result fmt-key group)))))
+                    gdb-registers-vector)
+    result))
+
+(defun scp/update-registers (&optional register-indices)
+  "Issue requests for the values of registers in REGISTER-INDICES,
+or all registers if not provided. This function requests raw
+values and formatted values grouped by format."
+  (let* ((registers-string (if register-indices
+                               (string-join (mapcar #'number-to-string register-indices) " ")
+                             ""))
+         (groups (scp/gdb-collect-registers register-indices)))
+    (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " r " registers-string)
+               (gdb-bind-function-to-buffer 'scp/gdb-registers-handler-raw (current-buffer)))
+    (while groups
+      (let* ((fmt-key (car groups))
+             (group (cadr groups))
+             (registers-string (string-join (mapcar #'number-to-string group) " "))
+             (fmt (substring (symbol-name fmt-key) 1))
+             (val-cmd (concat (gdb-current-context-command "-data-list-register-values") " " fmt " " registers-string))
+             (handler (plist-get scp/gdb-registers-handler-plist fmt-key)))
+        (gdb-input val-cmd
+                   (gdb-bind-function-to-buffer handler (current-buffer))
+                   (cons (current-buffer) 'scp/gdb-invalidate-registers))
+        (setq groups (cddr groups))))))
+
+(defun scp/gdb-invalidate-registers (signal)
+  (scp/gdb-initialize-registers-vector)
+  (cond
+   ((eq signal 'update-registers)
+    ;; remove changed indicator:
+    (seq-do (lambda (row)
+              (when row
+                (let ((value (gdb-reg-value row))
+                      (raw (gdb-reg-raw row)))
+                  (set-text-properties 0 (length raw) nil raw)
+                  (set-text-properties 0 (length value) nil value))))
+            gdb-registers-vector)
+    (let* ((register-indices (mapcar #'string-to-number gdb-changed-registers)))
+      (scp/update-registers register-indices)))
+   ((eq signal 'start)
+    (scp/update-registers))))
+
+
+(defun scp/gdb-registers-handler-custom (&optional fmt)
+  (when gdb-register-names
     (let ((register-values (gdb-mi--field (gdb-mi--partial-output) 'register-values)))
       (dolist (register register-values)
         (let* ((register-number (gdb-mi--field register 'number))
                (register-idx (string-to-number register-number))
                (val (gdb-mi--field register 'value))
-               (row (aref gdb-registers-rows register-idx)))
-          (setf (if raw-flag (gdb-reg-raw row) (gdb-reg-value row))
+               (row (aref gdb-registers-vector register-idx)))
+          (setf (if fmt (gdb-reg-value row) (gdb-reg-raw row))
                 (if (member register-number gdb-changed-registers)
                     (propertize val 'font-lock-face font-lock-warning-face)
-                  val)))))
-    (setq tabulated-list-entries (seq-map-indexed  (lambda (row idx)
-                                                     (list idx row))
-                                                   gdb-registers-rows))
+                  val))
+          (when fmt
+            (setf (gdb-reg-fmt row) fmt)))))
+    (setq tabulated-list-entries (seq-map-indexed (lambda (row idx)
+                                                    (list idx row))
+                                                  gdb-registers-vector))
 
     ;; (when gdb-registers-enable-filter
     ;;   (cl-loop for pattern
