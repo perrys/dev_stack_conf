@@ -50,6 +50,8 @@
  '(fill-column 80)
  '(gdb-debuginfod-enable-setting nil)
  '(gdb-many-windows nil)
+ '(gdb-registers-filter-pattern-list
+   '("^r[[:alpha:]]\\{2\\}$" "^r[[:digit:]]+$" "^[xyz]mm[[:digit:]]+$" ".*flags.*"))
  '(global-hl-line-mode t)
  '(indent-tabs-mode nil)
  '(make-backup-files nil)
