@@ -194,6 +194,8 @@ architectures."
 (def-scp/gdb-change-format "x")
 (def-scp/gdb-change-format "d")
 (def-scp/gdb-change-format "N")
+(def-scp/gdb-change-format "t")
+(def-scp/gdb-change-format "o")
 
 (setq gdb-registers-mode-map
       (let ((map (make-sparse-keymap)))
@@ -205,6 +207,8 @@ architectures."
         (define-key map "x" #'scp/gdb-change-format-x)
         (define-key map "d" #'scp/gdb-change-format-d)
         (define-key map "n" #'scp/gdb-change-format-N)
+        (define-key map "t" #'scp/gdb-change-format-t)
+        (define-key map "o" #'scp/gdb-change-format-o)
         map))
 
 (define-derived-mode gdb-registers-mode gdb-tabulated-list-mode "Registers"
@@ -224,6 +228,7 @@ architectures."
   (fmt nil)
   (raw nil)
   (value nil)
+  (display t)
   (other-shit nil))
 
 (defun gdb-edit-register-value (&optional event)
@@ -249,7 +254,14 @@ initialized"
                                :name (propertize register-name 'font-lock-face font-lock-variable-name-face)
                                :fmt "N"
                                :raw ""
-                               :value "")))
+                               :value ""
+                               :display (if gdb-registers-enable-filter
+                                            (cl-loop for pattern
+                                                     in gdb-registers-filter-pattern-list
+                                                     if (string-match pattern register-name)
+                                                     return t
+                                                     finally return nil)
+                                          t))))
                       gdb-register-names))))
 
 (defun scp/gdb-change-format (fmt &optional idx)
@@ -258,7 +270,7 @@ initialized"
   (setf (gdb-reg-fmt (aref gdb-registers-vector idx)) fmt)
   (scp/update-registers (list idx)))
 
-(defun scp/gdb-collect-registers (&optional indices)
+(defun scp/gdb-collect-registers (reg-vector &optional indices)
   "Return a plist mapping GDB format to the list of register indices
 in gdb-registers-vector with that format, optionally filtered to
 the ones in INDICES."
@@ -271,7 +283,7 @@ the ones in INDICES."
                                (group (plist-get result fmt-key)))
                           (push idx group)
                           (setq result (plist-put result fmt-key group)))))
-                    gdb-registers-vector)
+                    reg-vector)
     result))
 
 (defun scp/update-registers (&optional register-indices)
@@ -281,7 +293,7 @@ values and formatted values grouped by format."
   (let* ((registers-string (if register-indices
                                (string-join (mapcar #'number-to-string register-indices) " ")
                              ""))
-         (groups (scp/gdb-collect-registers register-indices)))
+         (groups (scp/gdb-collect-registers gdb-registers-vector register-indices)))
     (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " r " registers-string)
                (gdb-bind-function-to-buffer 'scp/gdb-registers-handler-raw (current-buffer)))
     (while groups
@@ -331,14 +343,11 @@ values and formatted values grouped by format."
     (setq tabulated-list-entries (seq-map-indexed (lambda (row idx)
                                                     (list idx row))
                                                   gdb-registers-vector))
-
-    ;; (when gdb-registers-enable-filter
-    ;;   (cl-loop for pattern
-    ;;            in gdb-registers-filter-pattern-list
-    ;;            if (string-match pattern register-name)
-    ;;            return t
-    ;;            finally return nil)))
-    )
+    (when gdb-registers-enable-filter
+      (setq tabulated-list-entries
+            (seq-filter (lambda (row)
+                          (gdb-reg-display (cadr row)))
+                        tabulated-list-entries))))
   (tabulated-list-print)
   (setq mode-name
         (gdb-current-context-mode-name "Registers")))
@@ -348,26 +357,16 @@ values and formatted values grouped by format."
 
 (advice-add #'gdb-registers-handler-custom :override #'scp/gdb-registers-handler-custom1)
 
-(defun scp/group-registers (rows)
-  (let ((alist nil)
-        (tmp nil))
-    (dolist (row rows)
-      (let* ((fmt (gdb-reg-fmt row))
-             (existing (cdr (assoc fmt alist))))
-        (setf (alist-get fmt alist nil nil 'equal)
-              (cons row existing))))
-    alist))
-
-
 (ert-deftest can-group-registers ()
-  (let* ((registers `(,(make-gdb-reg :name "nat1" :fmt "N")
-                      ,(make-gdb-reg :name "nat2" :fmt "N")
-                      ,(make-gdb-reg :name "int1" :fmt "d")
-                      ,(make-gdb-reg :name "int2" :fmt "d")
-                      ,(make-gdb-reg :name "nat3" :fmt "N")))
-         (groups (scp/group-registers registers))
-         (nats (cdr (assoc "N" groups)))
-         (ints (cdr (assoc "d" groups))))
+  (let* ((registers (vconcat `(,(make-gdb-reg :name "nat1" :fmt "N")
+                               ,(make-gdb-reg :name "nat2" :fmt "N")
+                               ,(make-gdb-reg :name "int1" :fmt "d")
+                               ,(make-gdb-reg :name "int2" :fmt "d")
+                               ,(make-gdb-reg :name "nat3" :fmt "N"))))
+         (groups (scp/gdb-collect-registers registers))
+         (to-reg (lambda (n) (aref registers n)))
+         (nats (mapcar to-reg (plist-get groups :N)))
+         (ints (mapcar to-reg (plist-get groups :d))))
     (should (equal '("nat3" "nat2" "nat1") (mapcar #'gdb-reg-name nats)))
     (should (equal '("int2" "int1") (mapcar #'gdb-reg-name ints)))))
 
@@ -384,7 +383,7 @@ values and formatted values grouped by format."
                  (with-current-buffer "*scratch*"
                    (save-excursion
                      (goto-char (point-max))
-                     (insert (format "\n%s" response))))))))
+                     (insert (pp-to-string response))))))))
 
 (defun gdb-cfg-setup-many-windows ()
   (interactive)
