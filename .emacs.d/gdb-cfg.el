@@ -234,13 +234,13 @@ architectures."
 (defun gdb-edit-register-value (&optional event)
   "Assign a value to a register displayed in the registers buffer."
   (interactive (list last-input-event))
-  (save-excursion
-    (if event (posn-set-point (event-end event)))
-    (beginning-of-line)
-    (let* ((var (get-text-property (point) 'gdb-register-name))
-	   (value (read-string (format "New value (%s): " var))))
-      (gud-basic-call
-       (concat  "-gdb-set variable $" var " = " value)))))
+  (if event (posn-set-point (event-end event)))
+  (let* ((idx (tabulated-list-get-id))
+         (reg (aref gdb-registers-vector idx))
+         (var (gdb-reg-name reg))
+	 (value (read-string (format "New value (%s): " var) (gdb-reg-raw reg))))
+    (gud-basic-call
+     (concat  "-gdb-set variable $" var " = " value))))
 
 (defun scp/gdb-initialize-registers-vector ()
   "Ensure that the buffer-local variable gdb-registers-vector is
@@ -340,17 +340,19 @@ values and formatted values grouped by format."
                   val))
           (when fmt
             (setf (gdb-reg-fmt row) fmt)))))
-    (setq tabulated-list-entries (seq-map-indexed (lambda (row idx)
-                                                    (list idx row))
-                                                  gdb-registers-vector))
-    (when gdb-registers-enable-filter
-      (setq tabulated-list-entries
-            (seq-filter (lambda (row)
-                          (gdb-reg-display (cadr row)))
-                        tabulated-list-entries))))
+    (let ((registers-vector
+           (if gdb-registers-enable-filter
+               (seq-filter (lambda (reg)
+                             (gdb-reg-display reg))
+                           gdb-registers-vector)
+             gdb-registers-vector)))
+      (setq tabulated-list-entries (seq-map-indexed (lambda (row idx)
+                                                      (list idx row))
+                                                    registers-vector))))
   (tabulated-list-print)
   (setq mode-name
-        (gdb-current-context-mode-name "Registers")))
+        (gdb-current-context-mode-name
+         (format "Reg-s%s" (if gdb-registers-enable-filter "filt" "all")))))
 
 (defun scp/gdb-registers-handler-custom1 ()
   (error "should not be called"))
