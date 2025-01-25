@@ -15,7 +15,9 @@
   (package-refresh-contents)
   (package-install 'use-package))
 
-(use-package bazel)
+(use-package bazel
+  :ensure t
+  )
 
 (use-package company
   :ensure t
@@ -33,6 +35,7 @@
         ("TAB". tab-indent-or-complete)))
 
 (use-package diminish
+  :ensure t
   :config
   ;; most diminish config in the next section
   (diminish 'abbrev-mode ""))
@@ -118,7 +121,9 @@
   (lsp-ui-sideline-show-diagnostics t)
   (lsp-ui-sideline-show-hover nil))
 
-(use-package magit)
+(use-package magit
+  :ensure t
+  )
 
 (use-package marginalia
   :after vertico
@@ -163,7 +168,9 @@
   :config
   (setq rustic-format-on-save t))
 
-(use-package undo-fu)
+(use-package undo-fu
+  :ensure t
+  )
 
 (use-package vertico
   :ensure t
@@ -177,7 +184,9 @@
   ;; see https://github.com/minad/vertico?tab=readme-ov-file#completion-styles-and-tab-completion
   (keymap-set vertico-map "TAB" #'minibuffer-complete))
 
-(use-package yaml)
+(use-package yaml
+  :ensure t
+  )
 
 (use-package yasnippet
   :ensure t
@@ -427,17 +436,17 @@ Does nothing, can be used for local keybindings."
 
 (add-to-list
  'display-buffer-alist
- '((or
-    "\\*Help\\*"
-    "\\*info\\*"
-    "\\*org-roam\\*"
-    (major-mode . dired-mode)
-    (lambda (buf config)
-      (with-current-buffer buf
-        (and (not (derived-mode-p 'magit-mode))
-             (not (derived-mode-p 'backtrace-mode))
-             (derived-mode-p 'special-mode))))
-    (derived-mode . tabulated-list-mode))
+ '((lambda (buffer-name config)
+     (or
+      (string-match-p "\\*Help\\*" buffer-name)
+      (string-match-p "\\*info\\*" buffer-name)
+      (string-match-p "\\*org-roam\\*" buffer-name)
+      (with-current-buffer buffer-name
+	(or (eq major-mode 'dired-mode)
+	    (derived-mode-p 'tabulated-list-mode)
+            (and (not (derived-mode-p 'magit-mode))
+		 (not (derived-mode-p 'backtrace-mode))
+		 (derived-mode-p 'special-mode))))))
    (display-buffer-in-side-window)
    (side . left)
    (slot . 1)
@@ -446,8 +455,10 @@ Does nothing, can be used for local keybindings."
 
 (add-to-list
  'display-buffer-alist
- '((or "\\*e?shell\\*"
-       (derived-mode . compilation-mode))
+ '((lambda (buffer-name config)
+     (or (string-match-p "\\*e?shell\\*" buffer-name)
+	 (with-current-buffer buffer-name
+	   (derived-mode-p 'compilation-mode))))
    (display-buffer-in-side-window)
    (side . bottom)
    (slot . 0)

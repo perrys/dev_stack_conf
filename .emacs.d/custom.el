@@ -63,7 +63,7 @@
      (file . find-file)
      (wl . wl-other-frame)))
  '(package-selected-packages
-   '(bazel protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml-mode projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(bazel protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
  '(safe-local-variable-values
    '((scp/format-on-save . t)
      (scp/delete-trailing-whitespace . t)
@@ -86,7 +86,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:inherit nil :extend nil :stipple nil :background "#1d2021" :foreground "#ebdbb2" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight ultra-light :height 106 :width normal :foundry "JB" :family "JetBrains Mono"))))
+ '(default ((t (:family "JetBrains Mono" :foundry "JB" :slant normal :weight normal :height 128 :width normal :inherit nil :extend nil :stipple nil :background "#1d2021" :foreground "#ebdbb2" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight ultra-light :height 106 :width normal :foundry "JB" :family "JetBrains Mono"))))
  '(flycheck-error ((t (:foreground "brightred" :inverse-video nil :box nil :underline (:color "#fb4933" :style wave :position nil)))))
  '(font-lock-comment-face ((t (:foreground "#7c6f64" :slant italic))))
  '(header-line ((t (:inherit mode-line-inactive :inverse-video nil :underline t))))

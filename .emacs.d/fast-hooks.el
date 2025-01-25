@@ -73,8 +73,9 @@
                                  ))
          (color (car color-and-cursor))
          (cursor (cdr color-and-cursor)))
-    (send-string-to-terminal (concat "\e[" cursor " q"))
-    (send-string-to-terminal (concat "\e]12;" (car color) "\a"))
+    (unless window-system
+      (send-string-to-terminal (concat "\e[" cursor " q"))
+      (send-string-to-terminal (concat "\e]12;" (car color) "\a")))
     (set-face-background 'mode-line (car color))
     (set-face-foreground 'mode-line (cdr color))))
 
