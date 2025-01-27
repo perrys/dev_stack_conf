@@ -242,8 +242,16 @@
                 regular-func)))
     (call-interactively func)))
 
+(defun scp/display-buffer-here (&optional bufname)
+  "Display the selected buffer in the current window"
+  (interactive "b")
+  (let ((display-buffer-overriding-action
+         (cons 'display-buffer-same-window
+               nil)))
+    (display-buffer bufname)))
+
 (defun scp/display-left-side (&optional buffer)
-  "Display the selected window in a side window at the left"
+  "Display the selected buffer in a side window at the left"
   (interactive "b")
   (unless buffer
     (setq buffer (buffer-name)))
@@ -255,7 +263,7 @@
            (slot . 0)))))
 
 (defun scp/display-bottom-side (&optional buffer)
-  "Display the selected window in a side window at the bottom"
+  "Display the selected buffer in a side window at the bottom"
   (interactive "b")
   (unless buffer
     (setq buffer (buffer-name)))
