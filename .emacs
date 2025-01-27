@@ -242,6 +242,30 @@
                 regular-func)))
     (call-interactively func)))
 
+(defun scp/display-left-side (&optional buffer)
+  "Display the selected window in a side window at the left"
+  (interactive "b")
+  (unless buffer
+    (setq buffer (buffer-name)))
+  (display-buffer
+   buffer
+   (cons 'display-buffer-in-side-window
+         '((window-width . 84)
+           (side . left)
+           (slot . 0)))))
+
+(defun scp/display-bottom-side (&optional buffer)
+  "Display the selected window in a side window at the bottom"
+  (interactive "b")
+  (unless buffer
+    (setq buffer (buffer-name)))
+  (display-buffer
+   buffer
+   (cons 'display-buffer-in-side-window
+         '((window-height . 0.25)
+           (side . bottom)
+           (slot . 0)))))
+
 (defun scp/enlarge-window-vertically (delta)
   "Make selected window DELTA columns taller."
   (interactive "p")
@@ -445,8 +469,8 @@ Does nothing, can be used for local keybindings."
 	(or (eq major-mode 'dired-mode)
 	    (derived-mode-p 'tabulated-list-mode)
             (and (not (derived-mode-p 'magit-mode))
-		 (not (derived-mode-p 'backtrace-mode))
-		 (derived-mode-p 'special-mode))))))
+	         (not (derived-mode-p 'backtrace-mode))
+	         (derived-mode-p 'special-mode))))))
    (display-buffer-in-side-window)
    (side . left)
    (slot . 1)
@@ -463,6 +487,10 @@ Does nothing, can be used for local keybindings."
    (side . bottom)
    (slot . 0)
    (window-height . 0.25)))
+
+;; don't let ediff pop up new frames:
+(setq ediff-window-setup-function #'ediff-setup-windows-plain)
+(advice-add 'ediff-window-display-p :override #'ignore)
 
 
 ;; ------------------- keybindings ---------------------
