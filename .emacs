@@ -111,12 +111,12 @@
   :commands lsp-ui-mode
   :custom
   (lsp-ui-doc-delay 0.2)
-  (lsp-ui-doc-enable nil) ; disable ui-doc entirely
-  (lsp-ui-doc-show-with-cursor t)
+  ;; (lsp-ui-doc-enable nil) ; disable ui-doc entirely
+  (lsp-ui-doc-show-with-cursor nil)
   (lsp-ui-doc-show-with-mouse t)
   (lsp-ui-peek-always-show nil)
-  (lsp-ui-sideline-delay 1.0)
   (lsp-ui-sideline-enable nil) ; disable the sideline entirely
+  (lsp-ui-sideline-delay 1.0)
   (lsp-ui-sideline-show-code-actions t)
   (lsp-ui-sideline-show-diagnostics t)
   (lsp-ui-sideline-show-hover nil))
@@ -242,11 +242,18 @@
                 regular-func)))
     (call-interactively func)))
 
+(defun scp/display-buffer-same-window (buffer alist)
+  (let ((save-val (window-dedicated-p))
+        (win (selected-window)))
+    (set-window-dedicated-p win nil)
+    (display-buffer-same-window buffer alist)
+    (set-window-dedicated-p win save-val)))
+
 (defun scp/display-buffer-here (&optional bufname)
   "Display the selected buffer in the current window"
   (interactive "b")
   (let ((display-buffer-overriding-action
-         (cons 'display-buffer-same-window
+         (cons 'scp/display-buffer-same-window
                nil)))
     (display-buffer bufname)))
 
@@ -401,13 +408,6 @@ Does nothing, can be used for local keybindings."
   (interactive "p")
   (shrink-window delta nil))
 
-(defun scp/toggle-line-number-display ()
-  "Toggle between absolute and relative line numbers"
-  (interactive)
-  (if (eq display-line-numbers 'relative)
-      (setq display-line-numbers t)
-    (setq display-line-numbers 'relative)))
-
 (defun scp/window-cycle ()
   "Rotate buffers of (non-side) windows"
   (interactive)
@@ -451,7 +451,9 @@ Does nothing, can be used for local keybindings."
 
 ;; make _ part of a word:
 (add-hook 'prog-mode-hook
-          (lambda () (modify-syntax-entry ?_ "w")))
+          (lambda ()
+            (hl-line-mode 1)
+            (modify-syntax-entry ?_ "w")))
 
 (load-file (file-name-concat user-emacs-directory "fast-hooks.elc"))
 

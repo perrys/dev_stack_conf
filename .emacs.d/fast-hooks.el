@@ -24,6 +24,20 @@
   "Buffer-local holder for background face remapping")
 (make-variable-buffer-local 'scp/dim-bg)
 
+(defvar scp/display-line-numbers 'relative
+  "Buffer-local holder for display-line-numbers")
+(make-variable-buffer-local 'scp/display-line-numbers)
+(set-default 'scp/display-line-numbers 'relative)
+
+(defun scp/toggle-line-numbers ()
+  (interactive)
+  (setq-local scp/display-line-numbers
+              (cond
+               ((eq scp/display-line-numbers 'relative) t)
+               (scp/display-line-numbers nil)
+               (t 'relative)))
+  (scp/update-focused-window (selected-window)))
+
 (defun scp/update-unfocused-window (minibufp window)
   (let ((buffer (window-buffer window)))
     (with-current-buffer buffer
@@ -36,7 +50,7 @@
 (defun scp/update-focused-window (selected-window)
   (with-current-buffer (window-buffer selected-window)
     (unless (or (minibufferp) (derived-mode-p 'special-mode)
-                (setq-local display-line-numbers 'relative)))
+                (setq-local display-line-numbers scp/display-line-numbers)))
     (when scp/dim-bg
       (face-remap-remove-relative scp/dim-bg)
       (setq-local scp/dim-bg nil))))

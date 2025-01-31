@@ -52,7 +52,6 @@
  '(gdb-many-windows nil)
  '(gdb-registers-filter-pattern-list
    '("^r[[:alpha:]]\\{2\\}$" "^r[[:digit:]]+$" "^[xyz]mm[[:digit:]]+$" ".*flags.*"))
- '(global-hl-line-mode t)
  '(indent-tabs-mode nil)
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
