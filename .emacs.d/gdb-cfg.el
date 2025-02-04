@@ -1,3 +1,5 @@
+;;  -*- lexical-binding: t; -*-
+
 (require 'gdb-mi)
 
 (defcustom gdbx-address-format "0x%012x"
@@ -156,6 +158,58 @@ architectures."
 (advice-add #'gdb-breakpoints-list-handler-custom :after #'gdbx-disassembly-breakpoints-list-handler-custom)
 
 
+;;------------------------------ MI Variable Objects ----------------------------------------
+
+(cl-defstruct (gdbx-var (:type vector))
+  "Structure for gdb variable objects - associates variables with
+their children in the tree structure."
+  (data nil) ; contains the gdb-mi data
+  (child-names nil))
+
+(defvar gdbx-var-obj-table (make-hash-table :test 'equal)
+  "Hash table for mi variable objects, keyed by name (ID) of each variable object")
+
+(defun gdbx-var-expandablep (var-obj)
+  "Return non-nil if VAR-OBJ has children"
+  (let ((numchild (gdb-mi--field (gdbx-var-data var-obj) 'numchild)))
+    (and numchild (> (string-to-number numchild) 0))))
+
+(defun gdbx-var-create-floating (expr &optional callback)
+  "Create a floating variable object for EXPR, and store it in the var-obj table."
+  (gdb-input (concat "-var-create - @ " expr)
+             (lambda ()
+               (let* ((var-fields (gdb-mi--partial-output))
+                      (var-name (gdb-mi--field var-fields 'name))
+                      (var-obj (make-gdbx-var :data var-fields)))
+                 (puthash var-name var-obj gdbx-var-obj-table)
+                 (when callback
+                   (funcall callback var-obj))))))
+
+(defun gdbx-var-expand (var-name)
+  "Expand the named variable object to one level of its children."
+  (gdb-input (concat "-var-list-children --all-values " var-name)
+             (lambda ()
+               (let ((children (gdb-mi--field (gdb-mi--partial-output) 'children))
+                     (child-names nil)
+                     (parent (gethash var-name gdbx-var-obj-table)))
+                 (seq-doseq (child children)
+                   (let ((child-name (gdb-mi--field child 'name)))
+                     ;; cdr to get rid of the 'child symbol which is first in the list
+                     (puthash child-name (make-gdbx-var :data (cdr child)) gdbx-var-obj-table)
+                     (push child-name child-names)))
+                 (setf (gdbx-var-child-names parent) child-names)))))
+
+
+(defun gdbx-var-update-reg (var-name)
+  (gdb-input (concat "-var-update --all-values " var-name)
+             (lambda ()
+               (let ((changelist (gdb-mi--field (gdb-mi--partial-output) 'changelist)))
+                 (seq-doseq (child changelist)
+                   (let* ((var-name (gdb-mi--field child 'name))
+                          (var-obj (gethash var-name gdbx-var-obj-table)))
+                     (setf (gdbx-var-data var-obj) child)))))))
+
+
 ;;------------------------------ Registers ----------------------------------------
 
 
@@ -233,6 +287,7 @@ architectures."
   (setq-local gdbx-registers-vector nil)
   'gdbx-invalidate-registers)
 
+
 (cl-defstruct (gdbx-reg (:type vector))
   "Structure for register data and metadata"
   (name nil :read-only t)
@@ -241,7 +296,34 @@ architectures."
   (value nil)
   (display t)
   (idx nil :read-only t)
-  (other-shit nil))
+  (var-name nil)
+  (child-names nil))
+
+(defun gdbx-make-var-reg (var-fields)
+  "Create a gdbx-reg struct for a variable object"
+  (let ((name (gdb-mi--field var-fields 'name)))
+    (make-gdbx-reg
+     :name (propertize name 'font-lock-face font-lock-variable-name-face)
+     :idx name
+     :fmt "O"
+     :raw (gdb-mi--field var-fields 'type)
+     :value (gdb-mi--field var-fields 'value))))
+
+
+(defun gdbx-create-register-var (reg-idx)
+  "Create a floating (i.e. for all frames) variable object for the
+given register number. The name of the variable object will be
+stored in the register's var-name field."
+  (let* ((reg-obj (aref gdbx-registers-vector reg-idx))
+         (reg-name (substring-no-properties (gdbx-reg-name reg-obj))))
+
+    (gdbx-var-create-floating
+     (concat "$" reg-name)
+     (lambda (var-obj)
+       (let* ((data (gdbx-var-data var-obj))
+              (var-name (gdb-mi--field data 'name)))
+         (setf (gdbx-var-data var-obj) (cons (cons 'exp reg-name) data))
+         (setf (gdbx-reg-var-name reg-obj) var-name))))))
 
 (defun gdbx-edit-register-value (&optional event)
   "Assign a value to a register displayed in the registers buffer."
@@ -338,8 +420,53 @@ values and formatted values grouped by format."
    ((eq signal 'start)
     (gdbx-update-registers))))
 
+(defun gdbx-print-var-register (var-obj depth)
+  (message "printing: ")
+  ;; (list (gdbx-reg-idx row) row) entries)
+  (let* ((data (gdbx-var-data var-obj))
+         (child-names (gdbx-var-child-names var-obj))
+         (name (gdb-mi--field data 'name))
+         (switch (if (gdbx-var-expandablep var-obj) (if child-names "- " "+ ") "  "))
+         (pad-fmt (format "%%%ds%%s%%s" (* 2 depth)))
+         (display-name (format pad-fmt "" switch (gdb-mi--field data 'exp)))
+         (type (gdb-mi--field data 'type))
+         (value (gdb-mi--field data 'value)))
+    (list name (vector display-name "O" type value))))
+
+(defun gdbx-print-var-register-recursive (var-name entries depth)
+  (let ((var-obj (gethash var-name gdbx-var-obj-table)))
+    (message "parent: %s" var-obj)
+    (push (gdbx-print-var-register var-obj depth) entries)
+    (message "parent done: %s" var-obj)
+    (dolist (child-name (gdbx-var-child-names var-obj))
+      (message "child: %s" child-name)
+      (setq entries (gdbx-print-var-register-recursive child-name entries (1+ depth))))
+    )
+  entries)
+
+(defun gdbx-print-registers (registers-vector)
+  "Update 'tablulated-list-entries' with data from the given
+registers vector, which is a possibly filtered list from
+'gdbx-registers-vector'."
+  (let* ((entries nil)
+         (printer
+          (lambda (row)
+            (if (and (equal "O" (gdbx-reg-fmt row))
+                     (gdbx-reg-var-name row))
+                (setq entries (gdbx-print-var-register-recursive (gdbx-reg-var-name row) entries 0))
+              (let ((line (vector
+                           (concat "  " (gdbx-reg-name row))
+                           (gdbx-reg-fmt row)
+                           (gdbx-reg-raw row)
+                           (gdbx-reg-value row))))
+                (push (list (gdbx-reg-idx row) line) entries))))))
+    (seq-do printer registers-vector)
+    (setq tabulated-list-entries (nreverse entries))))
 
 (defun gdbx-registers-handler-custom (&optional fmt)
+  "Handler for '-data-list-register-values'. The returned
+'register-values' field is a list of entries with a 'value' and a
+'number' field"
   (when gdb-register-names
     (let ((register-values (gdb-mi--field (gdb-mi--partial-output) 'register-values)))
       (dolist (register register-values)
@@ -359,9 +486,7 @@ values and formatted values grouped by format."
                              (gdbx-reg-display reg))
                            gdbx-registers-vector)
              gdbx-registers-vector)))
-      (setq tabulated-list-entries (seq-map (lambda (row)
-                                              (list (gdbx-reg-idx row) row))
-                                            registers-vector))))
+      (gdbx-print-registers registers-vector)))
   (tabulated-list-print)
   (setq mode-name
         (gdb-current-context-mode-name
@@ -397,49 +522,32 @@ values and formatted values grouped by format."
                      (goto-char (point-max))
                      (insert (pp-to-string response))))))))
 
+(defmacro gdbx-set-display-buffer (derived-mode side-sym slot-num)
+  `(add-to-list 'display-buffer-alist
+                '((lambda (buffer-name config)
+                    (with-current-buffer buffer-name
+                      (derived-mode-p ,derived-mode)))
+                  (display-buffer-in-side-window)
+                  (side . ,side-sym)
+                  (slot . ,slot-num))))
+
+
 (defun gdbx-cfg-setup-many-windows ()
   (interactive)
-  (add-to-list
-   'display-buffer-alist
-   '("\\*gud-*"
-     (display-buffer-in-side-window)
-     (side . left)
-     (slot . 0)))
-  (add-to-list
-   'display-buffer-alist
-   '((derived-mode . gdb-frames-mode)
-     (display-buffer-in-side-window)
-     (side . left)
-     (slot . 2)))
-  (add-to-list
-   'display-buffer-alist
-   `((derived-mode . gdb-memory-mode)
-     (display-buffer-in-side-window)
-     (side . bottom)
-     (slot . 1)))
-  (add-to-list
-   'display-buffer-alist
-   `((derived-mode . gdb-disassembly-mode)
-     (display-buffer-in-side-window)
-     (side . bottom)
-     (slot . 2)))
-  (add-to-list
-   'display-buffer-alist
-   '((derived-mode . gdb-breakpoints-mode)
-     (display-buffer-in-side-window)
-     (side . bottom)
-     (slot . 3)))
-  (add-to-list
-   'display-buffer-alist
-   '((derived-mode . gdb-registers-mode)
-     (display-buffer-in-side-window)
-     (side . right)
-     (slot . 2)))
+  (gdbx-set-display-buffer 'gud-mode left -1)
+  (gdbx-set-display-buffer 'gdb-frames-mode left 1)
+  (gdbx-set-display-buffer 'gdb-locals-mode right 0)
+  (gdbx-set-display-buffer 'gdb-registers-mode right 1)
+  (gdbx-set-display-buffer 'gdb-memory-mode bottom -1)
+  (gdbx-set-display-buffer 'gdb-disassembly-mode bottom 0)
+  (gdbx-set-display-buffer 'gdb-breakpoints-mode bottom 1)
+  (gdbx-set-display-buffer 'gdb-inferior-io-mode bottom 2)
   )
 (gdbx-cfg-setup-many-windows)
 
 (defun gdbx-ui ()
   (interactive)
+  (gdb-display-gdb-buffer)
   (gdb-display-breakpoints-buffer)
   (gdb-display-disassembly-buffer)
   (gdb-display-registers-buffer)
