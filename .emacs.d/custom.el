@@ -44,7 +44,6 @@
  '(display-buffer-base-action
    '((display-buffer-reuse-window display-buffer-in-previous-window display-buffer-reuse-mode-window display-buffer-use-some-window)
      (mode org-mode c-mode)))
- '(display-line-numbers 'relative)
  '(ediff-split-window-function 'split-window-horizontally)
  '(evil-search-module 'evil-search)
  '(fill-column 80)
