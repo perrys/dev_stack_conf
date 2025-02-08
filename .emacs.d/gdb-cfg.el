@@ -199,6 +199,13 @@ their children in the tree structure."
                      (push child-name child-names)))
                  (setf (gdbx-var-child-names parent) child-names)))))
 
+(defun gdbx-var-unexpand (var-name)
+  (let* ((parent (gethash var-name gdbx-var-obj-table))
+         (child-names (gdbx-var-child-names parent)))
+    (seq-doseq (child-name child-names)
+      (gdb-input (concat "-var-set-frozen " child-name " 1") nil))
+    (setf (gdbx-var-child-names parent) nil)))
+
 
 (defun gdbx-var-update-reg (var-name)
   (gdb-input (concat "-var-update --all-values " var-name)
