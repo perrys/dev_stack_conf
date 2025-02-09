@@ -68,7 +68,6 @@
      (index-tabs-mode)
      (c-indentation-style . elemetel)))
  '(select-enable-primary t)
- '(server-mode t)
  '(split-height-threshold 100)
  '(switch-to-buffer-in-dedicated-window 'pop)
  '(switch-to-buffer-obey-display-actions t)
