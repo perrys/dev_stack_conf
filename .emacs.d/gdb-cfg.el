@@ -218,14 +218,29 @@ their children in the tree structure."
                  (when callback
                    (funcall callback))))))
 
+(defun gdbx-varobj-merge (var-name updates)
+  (let* ((varobj (gethash var-name gdbx-varobj-table))
+         (data (gdbx-varobj-data varobj))
+         (in-scope (gdb-mi--field updates 'in_scope)))
+    (cond
+     ((equal "true" in-scope)
+      (setcdr (assq 'value data) (gdb-mi--field updates 'value))
+      (when (equal "true" (gdb-mi--field updates 'type_changed))
+        (setcdr (assq 'type data) (or (gdb-mi--field updates 'type) "<unknown>"))))
+     ((equal "false" in-scope)
+      (setcdr (assq 'value data) "<invalid>")
+      (setcdr (assq 'type data)  "<unknown>"))
+     ((equal "invalid" in-scope)
+      nil) ;; TODO: delete varobj
+     (t (error "invalid variable object update - in-scope=\"%s\"" in-scope)))))
+
 (defun gdbx-varobj-update (var-name &optional callback)
   (gdb-input (concat "-var-update --all-values " var-name)
              (lambda ()
                (let ((changelist (gdb-mi--field (gdb-mi--partial-output) 'changelist)))
                  (seq-doseq (child changelist)
-                   (let* ((var-name (gdb-mi--field child 'name))
-                          (varobj (gethash var-name gdbx-varobj-table)))
-                     (setf (gdbx-varobj-data varobj) child)))
+                   (let ((var-name (gdb-mi--field child 'name)))
+                     (gdbx-varobj-merge var-name child)))
                  (when callback
                    (funcall callback))))))
 
@@ -473,25 +488,24 @@ values and formatted values grouped by format."
    ((eq signal 'start)
     (gdbx-reg-update))))
 
-(defun gdbx-reg-varobj-print (varobj depth reg-idx)
-  (message "printing: %s %s %s" varobj depth reg-idx)
-  ;; (list (gdbx-reg-idx row) row) entries)
+(defun gdbx-reg-varobj-print (varobj depth reg-idx value-props)
   (let* ((data (gdbx-varobj-data varobj))
          (child-names (gdbx-varobj-child-names varobj))
          (varobj-name (gdb-mi--field data 'name))
          (switch (if (gdbx-varobj-expandablep varobj) (if child-names "- " "+ ") "  "))
          (pad-fmt (format "%%%ds%%s%%s" (* 2 depth)))
-         (display-name (format pad-fmt "" switch (or (gdb-mi--field data 'exp) "<missing>")))
-         (type (or (gdb-mi--field data 'type) "<missing>"))
-         (value (gdb-mi--field data 'value)))
+         (display-name (format pad-fmt "" switch
+                               (propertize (gdb-mi--field data 'exp) 'font-lock-face font-lock-variable-name-face)))
+         (type (apply #'propertize (gdb-mi--field data 'type) value-props))
+         (value (apply #'propertize (gdb-mi--field data 'value) value-props)))
     (list (if reg-idx reg-idx varobj-name) (vector display-name "+" type value))))
 
-(defun gdbx-reg-varobj-print-recursive (var-name entries depth reg-idx)
+(defun gdbx-reg-varobj-print-recursive (var-name entries depth reg-idx value-props)
   (let ((varobj (gethash var-name gdbx-varobj-table)))
     (when varobj
-      (push (gdbx-reg-varobj-print varobj depth reg-idx) entries)
+      (push (gdbx-reg-varobj-print varobj depth reg-idx value-props) entries)
       (dolist (child-name (gdbx-varobj-child-names varobj))
-        (setq entries (gdbx-reg-varobj-print-recursive child-name entries (1+ depth) nil)))
+        (setq entries (gdbx-reg-varobj-print-recursive child-name entries (1+ depth) nil value-props)))
       ))
   entries)
 
@@ -504,8 +518,11 @@ registers vector, which is a possibly filtered list from
           (lambda (row)
             (if (and (equal "+" (gdbx-reg-fmt row))
                      (gdbx-reg-varobj-name row))
-                (setq entries (gdbx-reg-varobj-print-recursive
-                               (gdbx-reg-varobj-name row) entries 0 (gdbx-reg-idx row)))
+                ;; Get properties from the register's raw value - a bit of a hack..
+                (let ((value-props (text-properties-at 0 (gdbx-reg-raw row))))
+                  (setq entries (gdbx-reg-varobj-print-recursive
+                                 (gdbx-reg-varobj-name row) entries 0 (gdbx-reg-idx row)
+                                 value-props)))
               (let ((line (vector
                            (concat "  " (gdbx-reg-name row))
                            (gdbx-reg-fmt row)
