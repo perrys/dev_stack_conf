@@ -1,6 +1,7 @@
 ;;  -*- lexical-binding: t; -*-
 
 (require 'gdb-mi)
+(eval-when-compile (require 'cl-lib))
 
 (defcustom gdbx-address-format "0x%012x"
   "Format for addresses to be printed in various panels.
@@ -160,61 +161,72 @@ architectures."
 
 ;;------------------------------ MI Variable Objects ----------------------------------------
 
-(cl-defstruct (gdbx-var (:type vector))
+(cl-defstruct (gdbx-varobj (:type vector))
   "Structure for gdb variable objects - associates variables with
 their children in the tree structure."
   (data nil) ; contains the gdb-mi data
   (child-names nil))
 
-(defvar gdbx-var-obj-table (make-hash-table :test 'equal)
+(defvar gdbx-varobj-table (make-hash-table :test 'equal)
   "Hash table for mi variable objects, keyed by name (ID) of each variable object")
 
-(defun gdbx-var-expandablep (var-obj)
-  "Return non-nil if VAR-OBJ has children"
-  (let ((numchild (gdb-mi--field (gdbx-var-data var-obj) 'numchild)))
+(defun gdbx-varobj-expandablep (varobj)
+  "Return non-nil if VAROBJ has children"
+  (let ((numchild (gdb-mi--field (gdbx-varobj-data varobj) 'numchild)))
     (and numchild (> (string-to-number numchild) 0))))
 
-(defun gdbx-var-create-floating (expr &optional callback)
-  "Create a floating variable object for EXPR, and store it in the var-obj table."
+(defun gdbx-varobj-create-floating (expr &optional callback)
+  "Create a floating variable object for EXPR, and store it in the varobj table."
   (gdb-input (concat "-var-create - @ " expr)
              (lambda ()
                (let* ((var-fields (gdb-mi--partial-output))
                       (var-name (gdb-mi--field var-fields 'name))
-                      (var-obj (make-gdbx-var :data var-fields)))
-                 (puthash var-name var-obj gdbx-var-obj-table)
+                      (varobj (make-gdbx-varobj :data var-fields)))
+                 (puthash var-name varobj gdbx-varobj-table)
                  (when callback
-                   (funcall callback var-obj))))))
+                   (funcall callback varobj))))))
 
-(defun gdbx-var-expand (var-name)
+(defun gdbx-varobj-expand (var-name varobj &optional callback)
   "Expand the named variable object to one level of its children."
   (gdb-input (concat "-var-list-children --all-values " var-name)
              (lambda ()
                (let ((children (gdb-mi--field (gdb-mi--partial-output) 'children))
-                     (child-names nil)
-                     (parent (gethash var-name gdbx-var-obj-table)))
+                     (child-names nil))
                  (seq-doseq (child children)
                    (let ((child-name (gdb-mi--field child 'name)))
                      ;; cdr to get rid of the 'child symbol which is first in the list
-                     (puthash child-name (make-gdbx-var :data (cdr child)) gdbx-var-obj-table)
+                     (puthash child-name (make-gdbx-varobj :data (cdr child)) gdbx-varobj-table)
                      (push child-name child-names)))
-                 (setf (gdbx-var-child-names parent) child-names)))))
+                 (setf (gdbx-varobj-child-names varobj) child-names)
+                 (when callback
+                   (funcall callback))))))
 
-(defun gdbx-var-unexpand (var-name)
-  (let* ((parent (gethash var-name gdbx-var-obj-table))
-         (child-names (gdbx-var-child-names parent)))
+(defun gdbx-varobj-remove-children-recursive (var-name)
+  (let* ((varobj (gethash var-name gdbx-varobj-table))
+         (child-names (gdbx-varobj-child-names varobj)))
     (seq-doseq (child-name child-names)
-      (gdb-input (concat "-var-set-frozen " child-name " 1") nil))
-    (setf (gdbx-var-child-names parent) nil)))
+      (gdbx-varobj-remove-children-recursive child-name)))
+  (remhash var-name gdbx-varobj-table))
 
+(defun gdbx-varobj-unexpand (var-name varobj &optional callback)
+  (let ((child-names (gdbx-varobj-child-names varobj)))
+    (seq-doseq (child-name child-names)
+      (gdbx-varobj-remove-children-recursive child-name))
+    (setf (gdbx-varobj-child-names varobj) nil)
+    (gdb-input (concat "-var-delete -c " var-name)
+               (lambda()
+                 (when callback
+                   (funcall callback))
+                 ))))
 
-(defun gdbx-var-update-reg (var-name)
+(defun gdbx-varobj-update (var-name)
   (gdb-input (concat "-var-update --all-values " var-name)
              (lambda ()
                (let ((changelist (gdb-mi--field (gdb-mi--partial-output) 'changelist)))
                  (seq-doseq (child changelist)
                    (let* ((var-name (gdb-mi--field child 'name))
-                          (var-obj (gethash var-name gdbx-var-obj-table)))
-                     (setf (gdbx-var-data var-obj) child)))))))
+                          (varobj (gethash var-name gdbx-varobj-table)))
+                     (setf (gdbx-varobj-data varobj) child)))))))
 
 
 ;;------------------------------ Registers ----------------------------------------
@@ -257,30 +269,34 @@ their children in the tree structure."
  'gdb-registers-buffer
  'gdb-registers-buffer-name             ;
  'gdb-registers-mode
- 'gdbx-invalidate-registers) ;; last one is "trigger" which is called from registers buffer by event subscriber mech
+ 'gdbx-reg-invalidate) ;; last one is "trigger" which is called from registers buffer by event subscriber mech
 
-(defmacro def-gdbx-change-format (fmt)
-  `(defun ,(intern (format "gdbx-change-format-%s" fmt)) ()
+(defmacro def-gdbx-reg-change-format (fmt)
+  `(defun ,(intern (format "gdbx-reg-change-format-%s" fmt)) ()
      (interactive)
-     (gdbx-change-format ,fmt)))
-(def-gdbx-change-format "x")
-(def-gdbx-change-format "d")
-(def-gdbx-change-format "N")
-(def-gdbx-change-format "t")
-(def-gdbx-change-format "o")
+     (gdbx-reg-change-format ,fmt)))
+(def-gdbx-reg-change-format "x")
+(def-gdbx-reg-change-format "d")
+(def-gdbx-reg-change-format "N")
+(def-gdbx-reg-change-format "t")
+(def-gdbx-reg-change-format "o")
+(def-gdbx-reg-change-format "+")
 
 (setq gdb-registers-mode-map
       (let ((map (make-sparse-keymap)))
         (suppress-keymap map)
         (define-key map "\r" 'gdb-edit-register-value)
         (define-key map [mouse-2] 'gdb-edit-register-value)
+        (define-key map [?\t] #'gdbx-reg-varobj-toggle-expanded)
+        (define-key map [mouse-1] #'gdbx-reg-varobj-toggle-expanded)
         (define-key map "q" 'kill-current-buffer)
         (define-key map "f" #'gdb-registers-toggle-filter)
-        (define-key map "x" #'gdbx-change-format-x)
-        (define-key map "d" #'gdbx-change-format-d)
-        (define-key map "n" #'gdbx-change-format-N)
-        (define-key map "t" #'gdbx-change-format-t)
-        (define-key map "o" #'gdbx-change-format-o)
+        (define-key map "x" #'gdbx-reg-change-format-x)
+        (define-key map "d" #'gdbx-reg-change-format-d)
+        (define-key map "n" #'gdbx-reg-change-format-N)
+        (define-key map "t" #'gdbx-reg-change-format-t)
+        (define-key map "o" #'gdbx-reg-change-format-o)
+        (define-key map "+" #'gdbx-reg-change-format-+)
         map))
 
 (define-derived-mode gdb-registers-mode gdbx-tabulated-list-mode "Registers"
@@ -292,7 +308,7 @@ their children in the tree structure."
                 '("Value" 999 nil)))
   (tabulated-list-init-header)
   (setq-local gdbx-registers-vector nil)
-  'gdbx-invalidate-registers)
+  'gdbx-reg-invalidate)
 
 
 (cl-defstruct (gdbx-reg (:type vector))
@@ -303,36 +319,25 @@ their children in the tree structure."
   (value nil)
   (display t)
   (idx nil :read-only t)
-  (var-name nil)
+  (varobj-name nil)
   (child-names nil))
 
-(defun gdbx-make-var-reg (var-fields)
-  "Create a gdbx-reg struct for a variable object"
-  (let ((name (gdb-mi--field var-fields 'name)))
-    (make-gdbx-reg
-     :name (propertize name 'font-lock-face font-lock-variable-name-face)
-     :idx name
-     :fmt "O"
-     :raw (gdb-mi--field var-fields 'type)
-     :value (gdb-mi--field var-fields 'value))))
-
-
-(defun gdbx-create-register-var (reg-idx)
+(defun gdbx-reg-create-varobj (reg-idx)
   "Create a floating (i.e. for all frames) variable object for the
 given register number. The name of the variable object will be
 stored in the register's var-name field."
   (let* ((reg-obj (aref gdbx-registers-vector reg-idx))
          (reg-name (substring-no-properties (gdbx-reg-name reg-obj))))
 
-    (gdbx-var-create-floating
+    (gdbx-varobj-create-floating
      (concat "$" reg-name)
-     (lambda (var-obj)
-       (let* ((data (gdbx-var-data var-obj))
+     (lambda (varobj)
+       (let* ((data (gdbx-varobj-data varobj))
               (var-name (gdb-mi--field data 'name)))
-         (setf (gdbx-var-data var-obj) (cons (cons 'exp reg-name) data))
-         (setf (gdbx-reg-var-name reg-obj) var-name))))))
+         (setf (gdbx-varobj-data varobj) (cons (cons 'exp reg-name) data))
+         (setf (gdbx-reg-varobj-name reg-obj) var-name))))))
 
-(defun gdbx-edit-register-value (&optional event)
+(defun gdbx-reg-edit-value (&optional event)
   "Assign a value to a register displayed in the registers buffer."
   (interactive (list last-input-event))
   (if event (posn-set-point (event-end event)))
@@ -343,9 +348,9 @@ stored in the register's var-name field."
     (gud-basic-call
      (concat  "-gdb-set variable $" var " = " value))))
 
-(advice-add #'gdb-edit-register-value :override #'gdbx-edit-register-value)
+(advice-add #'gdb-edit-register-value :override #'gdbx-reg-edit-value)
 
-(defun gdbx-initialize-registers-vector ()
+(defun gdbx-reg-initialize-registers-vector ()
   "Ensure that the buffer-local variable gdbx-registers-vector is
 initialized"
   (when gdb-register-names
@@ -366,13 +371,42 @@ initialized"
                                                  finally return nil))))
                       gdb-register-names))))
 
-(defun gdbx-change-format (fmt &optional idx)
+(defun gdbx-reg-change-format (fmt &optional idx)
   (unless idx
     (setq idx (tabulated-list-get-id)))
   (setf (gdbx-reg-fmt (aref gdbx-registers-vector idx)) fmt)
-  (gdbx-update-registers (list idx)))
+  (gdbx-reg-update (list idx)))
 
-(defun gdbx-collect-registers (reg-vector &optional indices)
+(defun gdbx-reg-varobj-name-for-id (id)
+  "Get the variable name for the register with ID in the registers tabulated list"
+  (if (fixnump id) ;; this is the root register index
+      (let* ((reg (aref gdbx-registers-vector id))
+             (reg-name (gdbx-reg-name reg))
+             (var-name (gdbx-reg-varobj-name reg)))
+        var-name)
+    id)) ;; should already be the var name
+
+(defun gdbx-reg-varobj-toggle-expanded (&optional id)
+  "For the register under point, expand or collapse as required"
+  (interactive)
+  (unless id
+    (setq id (tabulated-list-get-id)))
+  (let ((var-name (gdbx-reg-varobj-name-for-id id)))
+    (if var-name
+        (let ((varobj (gethash var-name gdbx-varobj-table)))
+          (when (gdbx-varobj-expandablep varobj)
+            (if (gdbx-varobj-child-names varobj)
+                (gdbx-varobj-unexpand var-name varobj
+                                      (gdb-bind-function-to-buffer #'gdbx-reg-update (current-buffer)))
+              (gdbx-varobj-expand var-name varobj
+                                  (gdb-bind-function-to-buffer #'gdbx-reg-update (current-buffer))))))
+      ;; register doesn't yet have a variable object
+      (cl-assert (fixnump id) t)
+      (let* ((reg (aref gdbx-registers-vector id)))
+        (when (equal "+" (gdbx-reg-fmt reg))
+          (gdbx-reg-create-varobj id))))))
+
+(defun gdbx-reg-collect-by-fmt (reg-vector &optional indices)
   "Return a plist mapping GDB format to the list of register indices
 in gdbx-registers-vector with that format, optionally filtered to
 the ones in INDICES."
@@ -388,14 +422,14 @@ the ones in INDICES."
                     reg-vector)
     result))
 
-(defun gdbx-update-registers (&optional register-indices)
+(defun gdbx-reg-update (&optional register-indices)
   "Issue requests for the values of registers in REGISTER-INDICES,
 or all registers if not provided. This function requests raw
 values and formatted values grouped by format."
   (let* ((registers-string (if register-indices
                                (string-join (mapcar #'number-to-string register-indices) " ")
                              ""))
-         (groups (gdbx-collect-registers gdbx-registers-vector register-indices)))
+         (groups (gdbx-reg-collect-by-fmt gdbx-registers-vector register-indices)))
     (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " r " registers-string)
                (gdb-bind-function-to-buffer 'gdbx-registers-handler-raw (current-buffer)))
     (while groups
@@ -405,13 +439,18 @@ values and formatted values grouped by format."
              (fmt (substring (symbol-name fmt-key) 1))
              (val-cmd (concat (gdb-current-context-command "-data-list-register-values") " " fmt " " registers-string))
              (handler (plist-get gdbx-registers-handler-plist fmt-key)))
-        (gdb-input val-cmd
-                   (gdb-bind-function-to-buffer handler (current-buffer))
-                   (cons (current-buffer) 'gdbx-invalidate-registers))
+        (if handler ;; normal register update
+            (gdb-input val-cmd
+                       (gdb-bind-function-to-buffer handler (current-buffer))
+                       (cons (current-buffer) 'gdbx-reg-invalidate))
+          (seq-doseq (reg-idx group) ;; variable object update
+            (let* ((reg-obj (aref gdbx-registers-vector reg-idx))
+                   (var-name (gdbx-reg-varobj-name reg-obj)))
+              (gdbx-varobj-update var-name))))
         (setq groups (cddr groups))))))
 
-(defun gdbx-invalidate-registers (signal)
-  (gdbx-initialize-registers-vector)
+(defun gdbx-reg-invalidate (signal)
+  (gdbx-reg-initialize-registers-vector)
   (cond
    ((eq signal 'update-registers)
     ;; remove changed indicator:
@@ -423,32 +462,30 @@ values and formatted values grouped by format."
                   (set-text-properties 0 (length value) nil value))))
             gdbx-registers-vector)
     (let* ((register-indices (mapcar #'string-to-number gdb-changed-registers)))
-      (gdbx-update-registers register-indices)))
+      (gdbx-reg-update register-indices)))
    ((eq signal 'start)
-    (gdbx-update-registers))))
+    (gdbx-reg-update))))
 
-(defun gdbx-print-var-register (var-obj depth)
+(defun gdbx-reg-varobj-print (varobj depth reg-idx)
   (message "printing: ")
   ;; (list (gdbx-reg-idx row) row) entries)
-  (let* ((data (gdbx-var-data var-obj))
-         (child-names (gdbx-var-child-names var-obj))
+  (let* ((data (gdbx-varobj-data varobj))
+         (child-names (gdbx-varobj-child-names varobj))
          (name (gdb-mi--field data 'name))
-         (switch (if (gdbx-var-expandablep var-obj) (if child-names "- " "+ ") "  "))
+         (switch (if (gdbx-varobj-expandablep varobj) (if child-names "- " "+ ") "  "))
          (pad-fmt (format "%%%ds%%s%%s" (* 2 depth)))
          (display-name (format pad-fmt "" switch (gdb-mi--field data 'exp)))
          (type (gdb-mi--field data 'type))
          (value (gdb-mi--field data 'value)))
-    (list name (vector display-name "O" type value))))
+    (list (if reg-idx reg-idx name) (vector display-name "+" type value))))
 
-(defun gdbx-print-var-register-recursive (var-name entries depth)
-  (let ((var-obj (gethash var-name gdbx-var-obj-table)))
-    (message "parent: %s" var-obj)
-    (push (gdbx-print-var-register var-obj depth) entries)
-    (message "parent done: %s" var-obj)
-    (dolist (child-name (gdbx-var-child-names var-obj))
-      (message "child: %s" child-name)
-      (setq entries (gdbx-print-var-register-recursive child-name entries (1+ depth))))
-    )
+(defun gdbx-reg-varobj-print-recursive (var-name entries depth reg-idx)
+  (let ((varobj (gethash var-name gdbx-varobj-table)))
+    (when varobj
+      (push (gdbx-reg-varobj-print varobj depth reg-idx) entries)
+      (dolist (child-name (gdbx-varobj-child-names varobj))
+        (setq entries (gdbx-reg-varobj-print-recursive child-name entries (1+ depth) nil)))
+      ))
   entries)
 
 (defun gdbx-print-registers (registers-vector)
@@ -458,9 +495,10 @@ registers vector, which is a possibly filtered list from
   (let* ((entries nil)
          (printer
           (lambda (row)
-            (if (and (equal "O" (gdbx-reg-fmt row))
-                     (gdbx-reg-var-name row))
-                (setq entries (gdbx-print-var-register-recursive (gdbx-reg-var-name row) entries 0))
+            (if (and (equal "+" (gdbx-reg-fmt row))
+                     (gdbx-reg-varobj-name row))
+                (setq entries (gdbx-reg-varobj-print-recursive
+                               (gdbx-reg-varobj-name row) entries 0 (gdbx-reg-idx row)))
               (let ((line (vector
                            (concat "  " (gdbx-reg-name row))
                            (gdbx-reg-fmt row)
@@ -507,7 +545,7 @@ registers vector, which is a possibly filtered list from
                                ,(make-gdb-reg :name "int1" :fmt "d")
                                ,(make-gdb-reg :name "int2" :fmt "d")
                                ,(make-gdb-reg :name "nat3" :fmt "N"))))
-         (groups (gdbx-collect-registers registers))
+         (groups (gdbx-reg-collect-by-fmt registers))
          (to-reg (lambda (n) (aref registers n)))
          (nats (mapcar to-reg (plist-get groups :N)))
          (ints (mapcar to-reg (plist-get groups :d))))
