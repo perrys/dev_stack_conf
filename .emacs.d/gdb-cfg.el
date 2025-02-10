@@ -235,8 +235,7 @@ their children in the tree structure."
       (when (equal "true" (gdb-mi--field updates 'type_changed))
         (setcdr (assq 'type data) (or (gdb-mi--field updates 'type) "<unknown>"))))
      ((equal "false" in-scope)
-      (setcdr (assq 'value data) "<invalid>")
-      (setcdr (assq 'type data)  "<unknown>"))
+      (setcdr (assq 'value data) "<invalid>"))
      ((equal "invalid" in-scope)
       nil) ;; TODO: delete varobj
      (t (error "invalid variable object update - in-scope=\"%s\"" in-scope)))))
