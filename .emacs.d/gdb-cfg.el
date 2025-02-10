@@ -175,9 +175,8 @@ their children in the tree structure."
   (let ((numchild (gdb-mi--field (gdbx-varobj-data varobj) 'numchild)))
     (and numchild (> (string-to-number numchild) 0))))
 
-(defun gdbx-varobj-create-floating (expr &optional callback)
-  "Create a floating variable object for EXPR, and store it in the varobj table."
-  (gdb-input (concat "-var-create - @ " expr)
+(defun gdbx-varobj-create (expr frame-spec callback)
+  (gdb-input (concat "-var-create - " frame-spec " " expr)
              (lambda ()
                (let* ((var-fields (gdb-mi--partial-output))
                       (var-name (gdb-mi--field var-fields 'name))
@@ -185,6 +184,14 @@ their children in the tree structure."
                  (puthash var-name varobj gdbx-varobj-table)
                  (when callback
                    (funcall callback varobj))))))
+
+(defun gdbx-varobj-create-fixed (expr &optional callback)
+  "Create a fixed variable object (for the current frame) for EXPR, and store it in the varobj table."
+  (gdbx-varobj-create expr "*" callback))
+
+(defun gdbx-varobj-create-floating (expr &optional callback)
+  "Create a floating variable object for EXPR, and store it in the varobj table."
+  (gdbx-varobj-create "@" expr))
 
 (defun gdbx-varobj-expand (var-name varobj &optional callback)
   "Expand the named variable object to one level of its children."
