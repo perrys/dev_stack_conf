@@ -589,6 +589,33 @@ registers vector, which is a possibly filtered list from
 
 
 
+;;------------------------------ Locals ----------------------------------------
+
+(define-derived-mode gdb-locals-mode gdbx-tabulated-list-mode "Locals"
+  "Major mode for gdb local variables."
+  (setq tabulated-list-format
+        (vector '("Name" 16 nil :right-align nil)
+                '("Type" 18 nil :right-align t)
+                '("Value" 999 nil)))
+  (tabulated-list-init-header)
+  'gdb-invalidate-locals)
+
+(defun gdbx-locals-handler-custom (&optional fmt)
+  "Handler for '-stack-list-variables --simple-values'."
+  (let ((locals-list (bindat-get-field (gdb-mi--partial-output) 'variables))
+        (entries nil))
+    (dolist (local locals-list)
+      (let ((name (gdb-mi--field local 'name))
+            (value (gdb-mi--field local 'value))
+            (type (gdb-mi--field local 'type)))
+        (push (list name (vector name type value))
+              entries)))
+    (setq tabulated-list-entries (nreverse entries)))
+  (tabulated-list-print))
+
+(advice-add #'gdb-locals-handler-custom :override #'gdbx-locals-handler-custom)
+
+
 ;;------------------------------ Other stuff ----------------------------------------
 
 (defun gdbx-mi-eval (cmd)
