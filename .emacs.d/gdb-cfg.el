@@ -600,13 +600,24 @@ registers vector, which is a possibly filtered list from
   (tabulated-list-init-header)
   'gdb-invalidate-locals)
 
-(defun gdbx-locals-handler-custom (&optional fmt)
+(defun gdbx-invalidate-locals (&optional signal)
+  (when
+      (or (not '(start update))
+          (memq signal '(start update)))
+    (gdb-input (concat (gdb-current-context-command "-stack-list-variables") " --simple-values")
+               (gdb-bind-function-to-buffer 'gdb-locals-handler (current-buffer))
+               (cons (current-buffer) 'gdb-invalidate-locals))))
+
+(advice-add #'gdb-invalidate-locals :override #'gdbx-invalidate-locals)
+
+(defun gdbx-locals-handler-custom ()
   "Handler for '-stack-list-variables --simple-values'."
-  (let ((locals-list (bindat-get-field (gdb-mi--partial-output) 'variables))
-        (entries nil))
+  (let* ((output (gdb-mi--partial-output))
+         (locals-list (gdb-mi--field output 'variables))
+         (entries nil))
     (dolist (local locals-list)
       (let ((name (gdb-mi--field local 'name))
-            (value (gdb-mi--field local 'value))
+            (value (or (gdb-mi--field local 'value) "<complex>"))
             (type (gdb-mi--field local 'type)))
         (push (list name (vector name type value))
               entries)))
@@ -657,6 +668,7 @@ registers vector, which is a possibly filtered list from
   (gdb-display-gdb-buffer)
   (gdb-display-breakpoints-buffer)
   (gdb-display-disassembly-buffer)
+  (gdb-display-locals-buffer)
   (gdb-display-registers-buffer)
   (gdb-display-stack-buffer))
 
