@@ -598,6 +598,7 @@ registers vector, which is a possibly filtered list from
                 '("Type" 18 nil :right-align t)
                 '("Value" 999 nil)))
   (tabulated-list-init-header)
+  (setq-local gdbx-locals-table (make-hash-table :test 'equal))
   'gdb-invalidate-locals)
 
 (defun gdbx-invalidate-locals (&optional signal)
@@ -625,6 +626,22 @@ registers vector, which is a possibly filtered list from
   (tabulated-list-print))
 
 (advice-add #'gdb-locals-handler-custom :override #'gdbx-locals-handler-custom)
+
+(defun gdbx-locals-create-varobj (&optional expr)
+  "Create a fixed (i.e. for this frame) variable object for the given expression."
+  (interactive "sexpr: ")
+  (unless expr
+    (setq expr (tabulated-list-get-id)))
+  (gdbx-varobj-create-fixed
+   expr
+   (gdb-bind-function-to-buffer
+    (lambda (varobj)
+      (let* ((data (gdbx-varobj-data varobj))
+             (var-name (gdb-mi--field data 'name)))
+        ;; newly-created varobjs don't have an exp field, so add it
+        (setf (gdbx-varobj-data varobj) (cons (cons 'exp expr) data))
+        (puthash expr var-name gdbx-locals-table)))
+    (current-buffer))))
 
 
 ;;------------------------------ Other stuff ----------------------------------------
