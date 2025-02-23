@@ -165,6 +165,7 @@ architectures."
   "Structure for gdb variable objects - associates variables with
 their children in the tree structure."
   (data nil) ; contains the gdb-mi data
+  (name nil)
   (child-names nil))
 
 (defvar gdbx-varobj-table (make-hash-table :test 'equal)
@@ -180,7 +181,7 @@ their children in the tree structure."
              (lambda ()
                (let* ((var-fields (gdb-mi--partial-output))
                       (var-name (gdb-mi--field var-fields 'name))
-                      (varobj (make-gdbx-varobj :data var-fields)))
+                      (varobj (make-gdbx-varobj :data var-fields :name var-name)))
                  (puthash var-name varobj gdbx-varobj-table)
                  (when callback
                    (funcall callback varobj))))))
@@ -191,11 +192,11 @@ their children in the tree structure."
 
 (defun gdbx-varobj-create-floating (expr &optional callback)
   "Create a floating variable object for EXPR, and store it in the varobj table."
-  (gdbx-varobj-create "@" expr))
+  (gdbx-varobj-create expr "@" callback))
 
-(defun gdbx-varobj-expand (var-name varobj &optional callback)
+(defun gdbx-varobj-expand (varobj &optional callback)
   "Expand the named variable object to one level of its children."
-  (gdb-input (concat "-var-list-children --all-values " var-name)
+  (gdb-input (concat "-var-list-children --all-values " (gdbx-varobj-name varobj))
              (lambda ()
                (let ((children (gdb-mi--field (gdb-mi--partial-output) 'children))
                      (child-names nil))
@@ -215,12 +216,12 @@ their children in the tree structure."
       (gdbx-varobj-remove-children-recursive child-name)))
   (remhash var-name gdbx-varobj-table))
 
-(defun gdbx-varobj-unexpand (var-name varobj &optional callback)
+(defun gdbx-varobj-unexpand (varobj &optional callback)
   (let ((child-names (gdbx-varobj-child-names varobj)))
     (seq-doseq (child-name child-names)
       (gdbx-varobj-remove-children-recursive child-name))
     (setf (gdbx-varobj-child-names varobj) nil)
-    (gdb-input (concat "-var-delete -c " var-name)
+    (gdb-input (concat "-var-delete -c " (gdbx-varobj-name varobj))
                (lambda()
                  (when callback
                    (funcall callback))))))
@@ -327,7 +328,7 @@ their children in the tree structure."
   (setq tabulated-list-format
         (vector '("Name" 16 nil :right-align nil)
                 '("Fmt" 3 nil :right-align t)
-                '("Raw" 18 nil :right-align t)
+                '("Raw/Type" 18 nil :right-align t)
                 '("Value" 999 nil)))
   (tabulated-list-init-header)
   (setq-local gdbx-registers-vector nil)
@@ -424,10 +425,10 @@ initialized"
         (when (gdbx-varobj-expandablep varobj)
           (if (gdbx-varobj-child-names varobj)
               (gdbx-varobj-unexpand
-               var-name varobj
+               varobj
                (gdb-bind-function-to-buffer #'gdbx-reg-print-maybe-filtered (current-buffer)))
             (gdbx-varobj-expand
-             var-name varobj
+             varobj
              (gdb-bind-function-to-buffer #'gdbx-reg-print-maybe-filtered (current-buffer)))))))))
 
 (defun gdbx-reg-collect-by-fmt (reg-vector &optional indices)
@@ -494,7 +495,7 @@ values and formatted values grouped by format."
    ((eq signal 'start)
     (gdbx-reg-update))))
 
-(defun gdbx-reg-varobj-print (varobj depth reg-idx value-props)
+(defun gdbx-reg-varobj-print (varobj depth id value-props)
   (let* ((data (gdbx-varobj-data varobj))
          (child-names (gdbx-varobj-child-names varobj))
          (varobj-name (gdb-mi--field data 'name))
@@ -504,12 +505,12 @@ values and formatted values grouped by format."
                                (propertize (gdb-mi--field data 'exp) 'font-lock-face font-lock-variable-name-face)))
          (type (apply #'propertize (gdb-mi--field data 'type) value-props))
          (value (apply #'propertize (gdb-mi--field data 'value) value-props)))
-    (list (if reg-idx reg-idx varobj-name) (vector display-name "+" type value))))
+    (list (if id id varobj-name) (vector display-name "+" type value))))
 
-(defun gdbx-reg-varobj-print-recursive (var-name entries depth reg-idx value-props)
+(defun gdbx-reg-varobj-print-recursive (var-name entries depth id value-props)
   (let ((varobj (gethash var-name gdbx-varobj-table)))
     (when varobj
-      (push (gdbx-reg-varobj-print varobj depth reg-idx value-props) entries)
+      (push (gdbx-reg-varobj-print varobj depth id value-props) entries)
       (dolist (child-name (gdbx-varobj-child-names varobj))
         (setq entries (gdbx-reg-varobj-print-recursive child-name entries (1+ depth) nil value-props)))
       ))
@@ -595,6 +596,7 @@ registers vector, which is a possibly filtered list from
   "Major mode for gdb local variables."
   (setq tabulated-list-format
         (vector '("Name" 16 nil :right-align nil)
+                '("Fmt" 3 nil :right-align t)
                 '("Type" 18 nil :right-align t)
                 '("Value" 999 nil)))
   (tabulated-list-init-header)
@@ -617,11 +619,14 @@ registers vector, which is a possibly filtered list from
          (locals-list (gdb-mi--field output 'variables))
          (entries nil))
     (dolist (local locals-list)
-      (let ((name (gdb-mi--field local 'name))
-            (value (or (gdb-mi--field local 'value) "<complex>"))
-            (type (gdb-mi--field local 'type)))
-        (push (list name (vector name type value))
-              entries)))
+      (let* ((name (gdb-mi--field local 'name))
+             (value (or (gdb-mi--field local 'value) "<complex>"))
+             (type (gdb-mi--field local 'type))
+             (varobj-name (gethash name gdbx-locals-table)))
+        (if varobj-name
+            (setq entries (gdbx-reg-varobj-print-recursive varobj-name entries 0 name nil))
+          (push (list name (vector (concat "  " name) "" type value))
+                entries))))
     (setq tabulated-list-entries (nreverse entries)))
   (tabulated-list-print))
 
@@ -629,7 +634,6 @@ registers vector, which is a possibly filtered list from
 
 (defun gdbx-locals-create-varobj (&optional expr)
   "Create a fixed (i.e. for this frame) variable object for the given expression."
-  (interactive "sexpr: ")
   (unless expr
     (setq expr (tabulated-list-get-id)))
   (gdbx-varobj-create-fixed
