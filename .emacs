@@ -1,6 +1,7 @@
 ;;  -*- lexical-binding: t; -*-
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(add-to-list 'load-path (file-name-concat user-emacs-directory "gdbx"))
 
 
 ;; ------------------- packages ---------------------
@@ -195,7 +196,7 @@
   (add-hook 'prog-mode-hook 'yas-minor-mode)
   (add-hook 'text-mode-hook 'yas-minor-mode))
 
-(load-file (file-name-concat user-emacs-directory "gdb-cfg.el"))
+(require 'gdbx)
 
 
 ;; ------------------- other settings ---------------------

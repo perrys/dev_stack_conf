@@ -694,4 +694,4 @@ registers vector, which is a possibly filtered list from
   (gdb-display-stack-buffer))
 
 
-(provide 'gdb-cfg)
+(provide 'gdbx)
