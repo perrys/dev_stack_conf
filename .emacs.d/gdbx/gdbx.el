@@ -603,15 +603,49 @@ registers vector, which is a possibly filtered list from
   (setq-local gdbx-locals-table (make-hash-table :test 'equal))
   'gdb-invalidate-locals)
 
+(setq gdb-locals-mode-map
+      (let ((map (make-sparse-keymap)))
+        (suppress-keymap map)
+        (define-key map [?\t] #'gdbx-locals-varobj-toggle-expanded)
+        (define-key map [mouse-1] #'gdbx-locals-varobj-toggle-expanded)
+        (define-key map "q" 'kill-current-buffer)
+        (define-key map "n" #'gdbx-locals-change-format-N)
+        (define-key map "+" #'gdbx-locals-varobj-toggle-expanded)
+        map))
+
 (defun gdbx-invalidate-locals (&optional signal)
   (when
-      (or (not '(start update))
+      (or (not signal)
           (memq signal '(start update)))
     (gdb-input (concat (gdb-current-context-command "-stack-list-variables") " --simple-values")
                (gdb-bind-function-to-buffer 'gdb-locals-handler (current-buffer))
                (cons (current-buffer) 'gdb-invalidate-locals))))
 
 (advice-add #'gdb-invalidate-locals :override #'gdbx-invalidate-locals)
+
+(defun gdbx-locals-varobj-toggle-expanded (&optional id)
+  "For the register under point, expand or collapse as required"
+  (interactive)
+  (unless id
+    (setq id (tabulated-list-get-id)))
+  (let* ((key (if (string-prefix-p "varobj://" id) id (gdbx-locals-make-key id)))
+         (var-name (gethash key gdbx-locals-table)))
+    (when var-name
+      (let ((varobj (gethash var-name gdbx-varobj-table)))
+        (when (gdbx-varobj-expandablep varobj)
+          (if (gdbx-varobj-child-names varobj)
+              (gdbx-varobj-unexpand
+               varobj
+               (gdb-bind-function-to-buffer #'gdbx-invalidate-locals (current-buffer)))
+            (gdbx-varobj-expand
+             varobj
+             (gdb-bind-function-to-buffer #'gdbx-invalidate-locals (current-buffer)))))))))
+
+(defun gdbx-locals-make-key (name)
+  "Make a varobj key for the given variable for the current thread & stack frame context"
+  (let ((frame-id (gdb-mi--field (gdb-current-buffer-frame) 'func))
+        (thread-id gdb-thread-number))
+    (concat "varobj://" frame-id "@" thread-id "/" name)))
 
 (defun gdbx-locals-handler-custom ()
   "Handler for '-stack-list-variables --simple-values'."
@@ -622,7 +656,8 @@ registers vector, which is a possibly filtered list from
       (let* ((name (gdb-mi--field local 'name))
              (value (or (gdb-mi--field local 'value) "<complex>"))
              (type (gdb-mi--field local 'type))
-             (varobj-name (gethash name gdbx-locals-table)))
+             (varobj-key (gdbx-locals-make-key name))
+             (varobj-name (gethash varobj-key gdbx-locals-table)))
         (if varobj-name
             (setq entries (gdbx-reg-varobj-print-recursive varobj-name entries 0 name nil))
           (push (list name (vector (concat "  " name) "" type value))
@@ -636,16 +671,17 @@ registers vector, which is a possibly filtered list from
   "Create a fixed (i.e. for this frame) variable object for the given expression."
   (unless expr
     (setq expr (tabulated-list-get-id)))
-  (gdbx-varobj-create-fixed
-   expr
-   (gdb-bind-function-to-buffer
-    (lambda (varobj)
-      (let* ((data (gdbx-varobj-data varobj))
-             (var-name (gdb-mi--field data 'name)))
-        ;; newly-created varobjs don't have an exp field, so add it
-        (setf (gdbx-varobj-data varobj) (cons (cons 'exp expr) data))
-        (puthash expr var-name gdbx-locals-table)))
-    (current-buffer))))
+  (let ((var-key (gdbx-locals-make-key expr)))
+    (gdbx-varobj-create-fixed
+     expr
+     (gdb-bind-function-to-buffer
+      (lambda (varobj)
+        (let* ((data (gdbx-varobj-data varobj))
+               (var-name (gdb-mi--field data 'name)))
+          ;; newly-created varobjs don't have an exp field, so add it
+          (setf (gdbx-varobj-data varobj) (cons (cons 'exp expr) data))
+          (puthash var-key var-name gdbx-locals-table)))
+      (current-buffer)))))
 
 
 ;;------------------------------ Other stuff ----------------------------------------
