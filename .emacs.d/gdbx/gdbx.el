@@ -43,6 +43,10 @@ architectures."
 
 (advice-add #'gdb-display-source-buffer :after #'gdbx-ui-mode-enable)
 
+(defun gdbx-input (command &rest args)
+  (equal command "-enable-pretty-printing"))
+
+(advice-add #'gdb-input :before-until #'gdbx-input)
 
 
 ;;------------------------------ Disassembly ----------------------------------------
@@ -173,8 +177,9 @@ their children in the tree structure."
 
 (defun gdbx-varobj-expandablep (varobj)
   "Return non-nil if VAROBJ has children"
-  (let ((numchild (gdb-mi--field (gdbx-varobj-data varobj) 'numchild)))
-    (and numchild (> (string-to-number numchild) 0))))
+  (let ((dynamic (gdb-mi--field (gdbx-varobj-data varobj) 'dynamic))
+        (numchild (gdb-mi--field (gdbx-varobj-data varobj) 'numchild)))
+    (or dynamic (and numchild (> (string-to-number numchild) 0)))))
 
 (defun gdbx-varobj-create (expr frame-spec callback)
   (gdb-input (concat "-var-create - " frame-spec " " expr)
@@ -610,7 +615,7 @@ registers vector, which is a possibly filtered list from
         (define-key map [mouse-1] #'gdbx-locals-varobj-toggle-expanded)
         (define-key map "q" 'kill-current-buffer)
         (define-key map "n" #'gdbx-locals-change-format-N)
-        (define-key map "+" #'gdbx-locals-varobj-toggle-expanded)
+        (define-key map "+" #'gdbx-locals-change-format-+)
         map))
 
 (defun gdbx-invalidate-locals (&optional signal)
@@ -623,8 +628,16 @@ registers vector, which is a possibly filtered list from
 
 (advice-add #'gdb-invalidate-locals :override #'gdbx-invalidate-locals)
 
+(defun gdbx-locals-change-format-+ ()
+  (interactive)
+  (let ((id (tabulated-list-get-id)))
+    (unless (string-prefix-p "varobj://" id)
+      (gdbx-locals-create-varobj
+       id
+       (lambda (varobj) (gdbx-invalidate-locals))))))
+
 (defun gdbx-locals-varobj-toggle-expanded (&optional id)
-  "For the register under point, expand or collapse as required"
+  "For the local variable under point, expand or collapse as required"
   (interactive)
   (unless id
     (setq id (tabulated-list-get-id)))
@@ -660,17 +673,15 @@ registers vector, which is a possibly filtered list from
              (varobj-name (gethash varobj-key gdbx-locals-table)))
         (if varobj-name
             (setq entries (gdbx-reg-varobj-print-recursive varobj-name entries 0 name nil))
-          (push (list name (vector (concat "  " name) "" type value))
+          (push (list name (vector (concat "  " name) "N" type value))
                 entries))))
     (setq tabulated-list-entries (nreverse entries)))
   (tabulated-list-print))
 
 (advice-add #'gdb-locals-handler-custom :override #'gdbx-locals-handler-custom)
 
-(defun gdbx-locals-create-varobj (&optional expr)
+(defun gdbx-locals-create-varobj (expr &optional callback)
   "Create a fixed (i.e. for this frame) variable object for the given expression."
-  (unless expr
-    (setq expr (tabulated-list-get-id)))
   (let ((var-key (gdbx-locals-make-key expr)))
     (gdbx-varobj-create-fixed
      expr
@@ -680,7 +691,9 @@ registers vector, which is a possibly filtered list from
                (var-name (gdb-mi--field data 'name)))
           ;; newly-created varobjs don't have an exp field, so add it
           (setf (gdbx-varobj-data varobj) (cons (cons 'exp expr) data))
-          (puthash var-key var-name gdbx-locals-table)))
+          (puthash var-key var-name gdbx-locals-table))
+        (when callback
+          (funcall callback varobj)))
       (current-buffer)))))
 
 
