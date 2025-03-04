@@ -243,6 +243,9 @@
                 regular-func)))
     (call-interactively func)))
 
+(defun scp/cycle-list (l)
+  (cons (car (last l)) (butlast l)))
+
 (defun scp/display-buffer-same-window (buffer alist)
   (let ((save-val (window-dedicated-p))
         (win (selected-window)))
@@ -359,25 +362,30 @@ Does nothing, can be used for local keybindings."
 (defvar scp/format-on-save nil
   "Controls if formatting is applied when saving a buffer.")
 
+(defun scp/format-buffer ()
+  (interactive)
+  (delete-trailing-whitespace)
+  (cond
+   ((derived-mode-p 'emacs-lisp-mode)
+    (let ((saved-point (point)))
+      (indent-region (point-min) (point-max))
+      (goto-char saved-point)))
+   ((or (derived-mode-p 'c-mode)
+        (derived-mode-p 'c++-mode))
+    (let ((saved-point (point))
+          (cmd "clang-format")
+          (args `("--style=file" ,(concat "--assume-filename=" (file-name-nondirectory (buffer-file-name))))))
+      (message (apply #'concat cmd " " args))
+      (save-restriction
+        (widen)
+        (apply #'call-process-region (point-min) (point-max) cmd t t nil args))
+      (goto-char saved-point))))
+  t)
+
 (defun scp/maybe-format-buffer ()
+  (interactive)
   (when scp/format-on-save
-    (delete-trailing-whitespace)
-    (cond
-     ((derived-mode-p 'emacs-lisp-mode)
-      (let ((saved-point (point)))
-        (indent-region (point-min) (point-max))
-        (goto-char saved-point)))
-     ((or (derived-mode-p 'c-mode)
-          (derived-mode-p 'c++-mode))
-      (let ((saved-point (point))
-            (cmd "clang-format")
-            (args `("--style=file" ,(concat "--assume-filename=" (file-name-nondirectory (buffer-file-name))))))
-        (message (apply #'concat cmd " " args))
-        (save-restriction
-          (widen)
-          (apply #'call-process-region (point-min) (point-max) cmd t t nil args))
-        (goto-char saved-point))))
-    t))
+    (scp/format-buffer)))
 
 (defun scp/non-side-window-list ()
   (seq-filter (lambda (win) (not (window-parameter win 'window-side)))
@@ -412,11 +420,9 @@ Does nothing, can be used for local keybindings."
 (defun scp/window-cycle ()
   "Rotate buffers of (non-side) windows"
   (interactive)
-  (let ((non-side-windows (scp/non-side-window-list))
-        (cycle-list-fn (lambda (l)
-                         (cons (car (last l)) (butlast l)))))
+  (let ((non-side-windows (scp/non-side-window-list)))
     (if (> (length non-side-windows) 1)
-        (let* ((cycled-buffer-list (funcall cycle-list-fn (mapcar 'window-buffer non-side-windows)))
+        (let* ((cycled-buffer-list (scp/cycle-list (mapcar 'window-buffer non-side-windows)))
                (pairs (cl-pairlis non-side-windows cycled-buffer-list)))
           (mapc (lambda (pair)
                   (set-window-buffer (car pair) (cdr pair)))
@@ -564,10 +570,7 @@ Does nothing, can be used for local keybindings."
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-j") 'windmove-down)
 (evil-define-key '(normal motion visual) 'scp/local-org-roam-mode-map (kbd "M-k") 'windmove-up)
 
-(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "<f8>") 'dapdbg-continue)
-(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "M-<f10>") 'dapdbg-next)
-(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "M-<f11>") 'dapdbg-step)
-(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "S-<f11>") 'dapdbg-finish)
-(evil-define-key '(normal motion visual) 'dapdbg-ui-mode-map (kbd "C-c b") 'dap-breakpoint-toggle)
+(evil-define-key '(normal motion visual) 'prog-mode-map (kbd "{") 'beginning-of-defun-comments)
+(evil-define-key '(normal motion visual) 'prog-mode-map (kbd "}") 'end-of-defun)
 
 (define-key scp/local-org-roam-mode-map  [remap evil-ret] 'scp/org-roam-open-or-link-at-point)
