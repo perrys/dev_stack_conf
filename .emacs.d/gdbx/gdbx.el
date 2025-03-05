@@ -208,7 +208,7 @@ their children in the tree structure."
                  (seq-doseq (child children)
                    (let ((child-name (gdb-mi--field child 'name)))
                      ;; cdr to get rid of the 'child symbol which is first in the list
-                     (puthash child-name (make-gdbx-varobj :data (cdr child)) gdbx-varobj-table)
+                     (puthash child-name (make-gdbx-varobj :data (cdr child) :name child-name) gdbx-varobj-table)
                      (push child-name child-names)))
                  (setf (gdbx-varobj-child-names varobj) (nreverse child-names))
                  (when callback
@@ -255,6 +255,27 @@ their children in the tree structure."
                      (gdbx-varobj-merge var-name child)))
                  (when callback
                    (funcall callback))))))
+
+(defun gdbx-varobj-print (varobj depth id value-props)
+  (let* ((data (gdbx-varobj-data varobj))
+         (child-names (gdbx-varobj-child-names varobj))
+         (varobj-name (gdb-mi--field data 'name))
+         (switch (if (gdbx-varobj-expandablep varobj) (if child-names "- " "+ ") "  "))
+         (pad-fmt (format "%%%ds%%s%%s" (* 2 depth)))
+         (display-name (format pad-fmt "" switch
+                               (propertize (gdb-mi--field data 'exp) 'font-lock-face font-lock-variable-name-face)))
+         (type (apply #'propertize (gdb-mi--field data 'type) value-props))
+         (value (apply #'propertize (gdb-mi--field data 'value) value-props)))
+    (list (if id id varobj-name) (vector display-name "+" type value))))
+
+(defun gdbx-varobj-print-recursive (var-name entries depth id value-props)
+  (let ((varobj (gethash var-name gdbx-varobj-table)))
+    (when varobj
+      (push (gdbx-varobj-print varobj depth id value-props) entries)
+      (dolist (child-name (gdbx-varobj-child-names varobj))
+        (setq entries (gdbx-varobj-print-recursive child-name entries (1+ depth) nil value-props)))
+      ))
+  entries)
 
 
 ;;------------------------------ Registers ----------------------------------------
@@ -500,27 +521,6 @@ values and formatted values grouped by format."
    ((eq signal 'start)
     (gdbx-reg-update))))
 
-(defun gdbx-reg-varobj-print (varobj depth id value-props)
-  (let* ((data (gdbx-varobj-data varobj))
-         (child-names (gdbx-varobj-child-names varobj))
-         (varobj-name (gdb-mi--field data 'name))
-         (switch (if (gdbx-varobj-expandablep varobj) (if child-names "- " "+ ") "  "))
-         (pad-fmt (format "%%%ds%%s%%s" (* 2 depth)))
-         (display-name (format pad-fmt "" switch
-                               (propertize (gdb-mi--field data 'exp) 'font-lock-face font-lock-variable-name-face)))
-         (type (apply #'propertize (gdb-mi--field data 'type) value-props))
-         (value (apply #'propertize (gdb-mi--field data 'value) value-props)))
-    (list (if id id varobj-name) (vector display-name "+" type value))))
-
-(defun gdbx-reg-varobj-print-recursive (var-name entries depth id value-props)
-  (let ((varobj (gethash var-name gdbx-varobj-table)))
-    (when varobj
-      (push (gdbx-reg-varobj-print varobj depth id value-props) entries)
-      (dolist (child-name (gdbx-varobj-child-names varobj))
-        (setq entries (gdbx-reg-varobj-print-recursive child-name entries (1+ depth) nil value-props)))
-      ))
-  entries)
-
 (defun gdbx-reg-print (registers-vector)
   "Update 'tablulated-list-entries' with data from the given
 registers vector, which is a possibly filtered list from
@@ -532,7 +532,7 @@ registers vector, which is a possibly filtered list from
                      (gdbx-reg-varobj-name row))
                 ;; Get properties from the register's raw value - a bit of a hack..
                 (let ((value-props (text-properties-at 0 (gdbx-reg-raw row))))
-                  (setq entries (gdbx-reg-varobj-print-recursive
+                  (setq entries (gdbx-varobj-print-recursive
                                  (gdbx-reg-varobj-name row) entries 0 (gdbx-reg-idx row)
                                  value-props)))
               (let ((line (vector
@@ -628,31 +628,34 @@ registers vector, which is a possibly filtered list from
 
 (advice-add #'gdb-invalidate-locals :override #'gdbx-invalidate-locals)
 
+(defun gdbx-strip-prefix (str prefix)
+  (substring str (length prefix)))
+
 (defun gdbx-locals-change-format-+ ()
   (interactive)
   (let ((id (tabulated-list-get-id)))
-    (unless (string-prefix-p "varobj://" id)
+    (when (string-prefix-p "local://" id)
       (gdbx-locals-create-varobj
-       id
+       (gdbx-strip-prefix id "local://")
        (lambda (varobj) (gdbx-invalidate-locals))))))
 
-(defun gdbx-locals-varobj-toggle-expanded (&optional id)
+(defun gdbx-locals-varobj-toggle-expanded ()
   "For the local variable under point, expand or collapse as required"
   (interactive)
-  (unless id
-    (setq id (tabulated-list-get-id)))
-  (let* ((key (if (string-prefix-p "varobj://" id) id (gdbx-locals-make-key id)))
-         (var-name (gethash key gdbx-locals-table)))
-    (when var-name
-      (let ((varobj (gethash var-name gdbx-varobj-table)))
-        (when (gdbx-varobj-expandablep varobj)
-          (if (gdbx-varobj-child-names varobj)
-              (gdbx-varobj-unexpand
-               varobj
-               (gdb-bind-function-to-buffer #'gdbx-invalidate-locals (current-buffer)))
-            (gdbx-varobj-expand
-             varobj
-             (gdb-bind-function-to-buffer #'gdbx-invalidate-locals (current-buffer)))))))))
+  (let ((id (tabulated-list-get-id)))
+    (unless (string-prefix-p "local://" id)
+      (let* ((var-name (or (gethash (gdbx-locals-make-key id) gdbx-locals-table)
+                           id)))
+        (when var-name
+          (let ((varobj (gethash var-name gdbx-varobj-table)))
+            (when (gdbx-varobj-expandablep varobj)
+              (if (gdbx-varobj-child-names varobj)
+                  (gdbx-varobj-unexpand
+                   varobj
+                   (gdb-bind-function-to-buffer #'gdbx-invalidate-locals (current-buffer)))
+                (gdbx-varobj-expand
+                 varobj
+                 (gdb-bind-function-to-buffer #'gdbx-invalidate-locals (current-buffer)))))))))))
 
 (defun gdbx-locals-make-key (name)
   "Make a varobj key for the given variable for the current thread & stack frame context"
@@ -672,8 +675,8 @@ registers vector, which is a possibly filtered list from
              (varobj-key (gdbx-locals-make-key name))
              (varobj-name (gethash varobj-key gdbx-locals-table)))
         (if varobj-name
-            (setq entries (gdbx-reg-varobj-print-recursive varobj-name entries 0 name nil))
-          (push (list name (vector (concat "  " name) "N" type value))
+            (setq entries (gdbx-varobj-print-recursive varobj-name entries 0 name nil))
+          (push (list (concat "local://" name) (vector (concat "  " name) "N" type value))
                 entries))))
     (setq tabulated-list-entries (nreverse entries)))
   (tabulated-list-print))
