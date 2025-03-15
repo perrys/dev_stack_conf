@@ -165,15 +165,43 @@ architectures."
 
 ;;------------------------------ MI Variable Objects ----------------------------------------
 
+;; Note - gdb variable objects are "global" and not associated with a particular buffer.
+;;
+;; The following variables track the state of variable objects in the gdb
+;; session, and should be reset for each new gdb session:
+;;
+;; gdbx-varobj-table
+;;
+
 (cl-defstruct (gdbx-varobj (:type vector))
   "Structure for gdb variable objects - associates variables with
 their children in the tree structure."
   (data nil) ; contains the gdb-mi data
   (name nil)
+  (updated nil)
+  (kind nil)
   (child-names nil))
 
 (defvar gdbx-varobj-table (make-hash-table :test 'equal)
   "Hash table for mi variable objects, keyed by name (ID) of each variable object")
+
+(defun gdbx-update (&optional no-proc)
+  (unless no-proc
+    (gdb-var-update)))
+
+(advice-add #'gdb-update :after #'gdbx-update)
+
+(defun gdbx-var-update-handler ()
+  (let ((changelist (gdb-mi--field (gdb-mi--partial-output) 'changelist)))
+    (when (length changelist)
+      ;; first reset the updated flag on all varobjs:
+      (maphash (lambda (k v) (setf (gdbx-varobj-updated v) nil))
+               gdbx-varobj-table)
+      (dolist (change changelist)
+        (gdbx-varobj-merge (gdb-mi--field change 'name) change))
+      (gdb-emit-signal gdb-buf-publisher 'update-varobj))))
+
+(advice-add #'gdb-var-update-handler :override #'gdbx-var-update-handler)
 
 (defun gdbx-varobj-expandablep (varobj)
   "Return non-nil if VAROBJ has children"
@@ -181,10 +209,19 @@ their children in the tree structure."
         (numchild (gdb-mi--field (gdbx-varobj-data varobj) 'numchild)))
     (or dynamic (and numchild (> (string-to-number numchild) 0)))))
 
+(defun gdbx-varobj-strip-prefix (frame-spec expr)
+  "Strip the register prefix from a floating expression"
+  (if (and (equal frame-spec "@")
+           (equal (aref expr 0) ?$))
+      (substring expr 1)
+    expr))
+
 (defun gdbx-varobj-create (expr frame-spec callback)
   (gdb-input (concat "-var-create - " frame-spec " " expr)
              (lambda ()
-               (let* ((var-fields (gdb-mi--partial-output))
+               (let* ((bare-expr (gdbx-varobj-strip-prefix frame-spec expr))
+                      ;; newly-created varobjs don't have an exp field, so add it
+                      (var-fields (cons (cons 'exp bare-expr) (gdb-mi--partial-output)))
                       (var-name (gdb-mi--field var-fields 'name))
                       (varobj (make-gdbx-varobj :data var-fields :name var-name)))
                  (puthash var-name varobj gdbx-varobj-table)
@@ -235,6 +272,7 @@ their children in the tree structure."
   (let* ((varobj (gethash var-name gdbx-varobj-table))
          (data (gdbx-varobj-data varobj))
          (in-scope (gdb-mi--field updates 'in_scope)))
+    (cl-assert varobj (format "unknown variable object %s", var-name))
     (cond
      ((equal "true" in-scope)
       (setcdr (assq 'value data) (gdb-mi--field updates 'value))
@@ -383,8 +421,6 @@ stored in the register's var-name field."
      (lambda (varobj)
        (let* ((data (gdbx-varobj-data varobj))
               (var-name (gdb-mi--field data 'name)))
-         ;; newly-created varobjs don't have an exp field, so add it
-         (setf (gdbx-varobj-data varobj) (cons (cons 'exp reg-name) data))
          (setf (gdbx-reg-varobj-name reg-obj) var-name))
        (when callback
          (funcall callback))))))
@@ -480,16 +516,18 @@ values and formatted values grouped by format."
   (let* ((registers-string (if register-indices
                                (string-join (mapcar #'number-to-string register-indices) " ")
                              ""))
-         (groups (gdbx-reg-collect-by-fmt gdbx-registers-vector register-indices)))
+         (groups-plist (gdbx-reg-collect-by-fmt gdbx-registers-vector register-indices)))
     (gdb-input (concat (gdb-current-context-command "-data-list-register-values") " r " registers-string)
                (gdb-bind-function-to-buffer 'gdbx-registers-handler-raw (current-buffer)))
-    (while groups
-      (let* ((fmt-key (car groups))
-             (group (cadr groups))
+    (while groups-plist
+      (let* ((fmt-key (car groups-plist))
+             (group (cadr groups-plist))
              (registers-string (string-join (mapcar #'number-to-string group) " "))
              (fmt (substring (symbol-name fmt-key) 1))
              (val-cmd (concat (gdb-current-context-command "-data-list-register-values") " " fmt " " registers-string))
              (handler (plist-get gdbx-registers-handler-plist fmt-key)))
+        ;; a group which doesn't have a handler is a group of varobj registers. These are handled
+        ;; separately by the update-varobj event
         (if handler ;; normal register update
             (gdb-input val-cmd
                        (gdb-bind-function-to-buffer handler (current-buffer))
@@ -502,7 +540,7 @@ values and formatted values grouped by format."
                                       (gdb-bind-function-to-buffer #'gdbx-reg-print-maybe-filtered (current-buffer)))
                 (gdbx-reg-create-varobj reg-idx
                                         (gdb-bind-function-to-buffer #'gdbx-reg-print-maybe-filtered (current-buffer))))))))
-      (setq groups (cddr groups)))))
+      (setq groups-plist (cddr groups-plist)))))
 
 (defun gdbx-reg-invalidate (signal)
   (gdbx-reg-initialize-registers-vector)
@@ -619,9 +657,10 @@ registers vector, which is a possibly filtered list from
         map))
 
 (defun gdbx-invalidate-locals (&optional signal)
-  (when
-      (or (not signal)
-          (memq signal '(start update)))
+  (when (or (not signal)
+            (memq signal '(start update update-varobj)))
+    ;; We could avoid the round-trip to gdb if we could somehow update just the
+    ;; varobjs in the table.
     (gdb-input (concat (gdb-current-context-command "-stack-list-variables") " --simple-values")
                (gdb-bind-function-to-buffer 'gdb-locals-handler (current-buffer))
                (cons (current-buffer) 'gdb-invalidate-locals))))
@@ -692,8 +731,6 @@ registers vector, which is a possibly filtered list from
       (lambda (varobj)
         (let* ((data (gdbx-varobj-data varobj))
                (var-name (gdb-mi--field data 'name)))
-          ;; newly-created varobjs don't have an exp field, so add it
-          (setf (gdbx-varobj-data varobj) (cons (cons 'exp expr) data))
           (puthash var-key var-name gdbx-locals-table))
         (when callback
           (funcall callback varobj)))
