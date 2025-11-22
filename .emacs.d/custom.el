@@ -30,19 +30,27 @@
  '(cursor-type 'bar)
  '(custom-enabled-themes '(gruvbox-dark-hard))
  '(custom-safe-themes
-   '("8363207a952efb78e917230f5a4d3326b2916c63237c1f61d7e5fe07def8d378" "d445c7b530713eac282ecdeea07a8fa59692c83045bf84dd112dd738c7bcad1d" "d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" default))
+   '("75b371fce3c9e6b1482ba10c883e2fb813f2cc1c88be0b8a1099773eb78a7176"
+     "51fa6edfd6c8a4defc2681e4c438caf24908854c12ea12a1fbfd4d055a9647a3"
+     "5a0ddbd75929d24f5ef34944d78789c6c3421aa943c15218bac791c199fc897d"
+     "8363207a952efb78e917230f5a4d3326b2916c63237c1f61d7e5fe07def8d378"
+     "d445c7b530713eac282ecdeea07a8fa59692c83045bf84dd112dd738c7bcad1d"
+     "d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" default))
  '(dap-lldb-debug-program '("/usr/bin/lldb-dap-18"))
  '(dapdbg-gdb-command-line '("rust-gdb" "-i" "dap"))
  '(dapdbg-lldb-command-line '("lldb-dap-18"))
  '(dapdbg-lldb-init-commands
-   '("command script import ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc/lldb_lookup.py" "command source ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc/lldb_commands"))
+   '("command script import ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc/lldb_lookup.py"
+     "command source ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc/lldb_commands"))
  '(dapdbg-lldb-source-mappings '(("/foo/bar" . "/baz")))
  '(default-frame-alist '((width . 120) (height . 50) (menu-bar-lines . 1)))
  '(dired-garbage-files-regexp
    "\\(?:\\.\\(?:aux\\|bak\\|pyc\\|dvi\\|log\\|orig\\|rej\\|toc\\)\\)\\'")
  '(dired-listing-switches "-alGD")
  '(display-buffer-base-action
-   '((display-buffer-reuse-window display-buffer-in-previous-window display-buffer-reuse-mode-window display-buffer-use-some-window)
+   '((display-buffer-reuse-window display-buffer-in-previous-window
+                                  display-buffer-reuse-mode-window
+                                  display-buffer-use-some-window)
      (mode org-mode c-mode)))
  '(ediff-split-window-function 'split-window-horizontally)
  '(evil-search-module 'evil-search)
@@ -56,17 +64,15 @@
  '(mouse-yank-at-point t)
  '(org-link-frame-setup
    '((vm . vm-visit-folder-other-frame)
-     (vm-imap . vm-visit-imap-folder-other-frame)
-     (gnus . org-gnus-no-new-news)
-     (file . find-file)
-     (wl . wl-other-frame)))
+     (vm-imap . vm-visit-imap-folder-other-frame) (gnus . org-gnus-no-new-news)
+     (file . find-file) (wl . wl-other-frame)))
  '(package-selected-packages
-   '(bazel protobuf-mode lua-mode diminish evil-goggles org-roam-ui orderless org-roam yaml projectile consult marginalia vertico evil-collection magit gruvbox-theme flycheck-rust undo-fu evil-escape evil yasnippet company lsp-ui lsp-mode rustic use-package))
+   '(bazel company diminish evil-collection evil-escape evil-goggles flycheck
+           gruvbox-theme lsp-ui magit marginalia orderless org-roam undo-fu
+           vertico yaml yasnippet))
  '(safe-local-variable-values
-   '((scp/format-on-save . t)
-     (scp/delete-trailing-whitespace . t)
-     (index-tabs-mode)
-     (c-indentation-style . elemetel)))
+   '((scp/format-on-save . t) (scp/delete-trailing-whitespace . t)
+     (index-tabs-mode) (c-indentation-style . elemetel)))
  '(select-enable-primary t)
  '(split-height-threshold 100)
  '(switch-to-buffer-in-dedicated-window 'pop)
