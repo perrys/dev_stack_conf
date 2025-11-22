@@ -10,3 +10,4 @@ export EDITOR=vim
 set -o vi
 bind '"jk":vi-movement-mode'
 
+eval -- "$(/usr/bin/starship init bash --print-full-init)"
