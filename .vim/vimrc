@@ -1,0 +1,8 @@
+source $VIMRUNTIME/defaults.vim
+
+set background=dark
+
+inoremap jk <esc>
+vnoremap jk <esc>
+set timeoutlen=200
+

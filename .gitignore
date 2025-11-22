@@ -3,11 +3,13 @@
 
 # But not these files...
 !.gitignore
-!.config/kitty/kitty.conf
+!.gitconfig
+!.vim/vimrc
 !.emacs
 !.emacs.d/*.el
 !.tmux.conf
 !.zshrc
+!.bash_aliases
 !.gdbinit
 
 
