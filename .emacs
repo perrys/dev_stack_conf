@@ -153,6 +153,7 @@
 (require 'project)
 
 (use-package rustic
+  :ensure t
   ;; From https://robert.kra.hn/posts/rust-emacs-setup/
   :if (package-installed-p 'rustic)
   :bind (:map rustic-mode-map

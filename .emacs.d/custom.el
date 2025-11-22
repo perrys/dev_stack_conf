@@ -68,8 +68,8 @@
      (file . find-file) (wl . wl-other-frame)))
  '(package-selected-packages
    '(bazel company diminish evil-collection evil-escape evil-goggles flycheck
-           gruvbox-theme lsp-ui magit marginalia orderless org-roam undo-fu
-           vertico yaml yasnippet))
+           gruvbox-theme lsp-ui magit marginalia orderless org-roam rustic
+           undo-fu vertico yaml yasnippet))
  '(safe-local-variable-values
    '((scp/format-on-save . t) (scp/delete-trailing-whitespace . t)
      (index-tabs-mode) (c-indentation-style . elemetel)))
