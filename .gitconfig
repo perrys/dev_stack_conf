@@ -6,4 +6,4 @@
 [branch]
 	sort = -committerdate
 [alias]
-	oneline = log --pretty=format:\"%C(yellow)%h %C(blue)%<(15,trunc)%an %>(16)%C(green)%ah %C(reset)%<(100,trunc)%s\"
+	oneline = log --pretty=format:\"%C(yellow)%h %C(blue)%<(15,trunc)%an %>(16)%C(green)%ah %C(reset)%<(90,trunc)%s\"
