@@ -1,3 +1,4 @@
+;;  -*- lexical-binding: t; -*-
 ;; Functions which are called from common/frequent hooks, so should be
 ;; fast. After making changes remmber to recompile this file with:
 ;;
