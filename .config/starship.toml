@@ -3,7 +3,9 @@
 format = """
 [](color_orange)\
 $os\
+[ ](bg:color_orange)\
 $username\
+$hostname\
 [](bg:color_yellow fg:color_orange)\
 $directory\
 [](fg:color_yellow bg:color_aqua)\
@@ -69,10 +71,14 @@ RedHatEnterprise = "󱄛"
 Pop = ""
 
 [username]
-show_always = true
 style_user = "bg:color_orange fg:color_fg0"
 style_root = "bg:color_orange fg:color_fg0"
-format = '[ $user ]($style)'
+format = '[$user ]($style)'
+
+[hostname]
+style = "bg:color_orange fg:color_fg0"
+ssh_symbol = '🌐'
+format = '[$ssh_symbol$hostname ]($style)'
 
 [directory]
 style = "fg:color_fg0 bg:color_yellow"

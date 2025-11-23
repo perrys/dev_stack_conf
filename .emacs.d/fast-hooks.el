@@ -50,8 +50,8 @@
 
 (defun scp/update-focused-window (selected-window)
   (with-current-buffer (window-buffer selected-window)
-    (unless (or (minibufferp) (derived-mode-p 'special-mode)
-                (setq-local display-line-numbers scp/display-line-numbers)))
+    (unless (or (minibufferp) (derived-mode-p 'special-mode))
+      (setq-local display-line-numbers scp/display-line-numbers))
     (when scp/dim-bg
       (face-remap-remove-relative scp/dim-bg)
       (setq-local scp/dim-bg nil))))
