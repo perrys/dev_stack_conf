@@ -1,0 +1,15 @@
+{
+    "editor.fontFamily": "'JetBrainsMono Nerd Font'",
+    "workbench.colorTheme": "Gruvbox Dark Hard",
+    "vim.insertModeKeyBindings": [
+        { //exit insert mode
+            "before": [
+                "j",
+                "k"
+            ],
+            "after": [
+                "<Esc>"
+            ]
+        }
+    ]
+}
